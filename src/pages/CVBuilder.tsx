@@ -141,7 +141,7 @@ const CVBuilder = () => {
       const element = pdfRef.current;
       const opt = {
         margin: 0,
-        filename: 'page.pdf',
+        filename: 'my-cv.pdf',
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
           scale: 3.78, // 300 DPI for A4
@@ -315,13 +315,14 @@ const CVBuilder = () => {
 
       <div className="container mx-auto px-4 py-6">
         {previewMode ? (
-          <div className="flex justify-center" ref={pdfRef}>
-            <CVPreview 
-              data={cvData} 
-              template={{...currentTemplate, color: templateColor}}
-              isPDF={true}
-              isFullPagePDF={true}
-            />
+          <div className="flex justify-center">
+            <div ref={pdfRef} className="cv-page">
+              <CVPreview
+                data={cvData}
+                template={{ ...currentTemplate, color: templateColor }}
+                isPDF={true}
+              />
+            </div>
           </div>
         ) : (
           <div className="grid lg:grid-cols-2 gap-8">
