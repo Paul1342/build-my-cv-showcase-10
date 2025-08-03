@@ -147,7 +147,7 @@ const CVBuilder = () => {
           scale: 3.78, // 300 DPI for A4
           useCORS: true
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: [210, 297], orientation: 'portrait' }
       };
 
       await html2pdf().set(opt).from(element).save();
@@ -320,6 +320,7 @@ const CVBuilder = () => {
               data={cvData} 
               template={{...currentTemplate, color: templateColor}}
               isPDF={true}
+              isFullPagePDF={true}
             />
           </div>
         ) : (

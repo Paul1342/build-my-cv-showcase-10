@@ -158,6 +158,17 @@ All colors MUST be HSL.
     transform-origin: center center;
   }
   
+  /* PDF Export - Exact A4 dimensions for html2pdf */
+  .cv-page {
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  
   /* Print styles for PDF export */
   @media print {
     .cv-a4 {

@@ -11,9 +11,10 @@ interface CVPreviewProps {
   template: CVTemplate;
   isPreview?: boolean;
   isPDF?: boolean;
+  isFullPagePDF?: boolean;
 }
 
-const CVPreview = ({ data, template, isPreview = false, isPDF = false }: CVPreviewProps) => {
+const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPagePDF = false }: CVPreviewProps) => {
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -111,7 +112,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false }: CVPrevi
 
   if (template.columns === 2) {
     // Two Column Layout
-    return (
+    const cvContent = (
       <div className={`cv-a4 ${isPDF ? 'bg-white' : 'bg-background'} ${isPDF ? '' : 'border border-border rounded-lg shadow-card'} overflow-hidden ${isPreview ? 'text-xs' : 'text-sm'} cv-template`}>
         <style>
           {`
@@ -389,9 +390,11 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false }: CVPrevi
         </div>
       </div>
     );
+
+    return isFullPagePDF ? <div className="cv-page">{cvContent}</div> : cvContent;
   } else {
     // Single Column Layout
-    return (
+    const cvContent = (
       <div className={`cv-a4 ${isPDF ? 'bg-white' : 'bg-background'} ${isPDF ? '' : 'border border-border rounded-lg shadow-card'} p-6 ${isPreview ? 'text-xs' : 'text-sm'} space-y-6 cv-template`}>
         <style>
           {`
@@ -679,6 +682,8 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false }: CVPrevi
         </div>
       </div>
     );
+
+    return isFullPagePDF ? <div className="cv-page">{cvContent}</div> : cvContent;
   }
 };
 
