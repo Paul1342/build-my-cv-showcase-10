@@ -118,9 +118,9 @@ const CVPreview = ({
           .cv-header-minimal { border-bottom: 2px solid hsl(var(--template-primary)); }
         `}</style>
 
-        <div className="flex h-full">
+        <div className="flex h-full items-stretch">
           {/* Left Sidebar */}
-          <div className={`w-1/3 ${styles.sidebarBg} p-6 space-y-6`}>
+          <div className={`w-1/3 ${styles.sidebarBg} p-6 space-y-6 h-full flex flex-col`}>
             {template.hasPhoto && (
               <div className="text-center">
                 <img
@@ -242,7 +242,7 @@ const CVPreview = ({
           </div>
 
           {/* Right Content */}
-          <div className="flex-1 p-6 space-y-6">
+          <div className="flex-1 p-6 space-y-6 h-full flex flex-col">
             <div className={`${template.id === "minimal" ? styles.headerStyle + " pb-4" : "border-b border-border pb-4"}`}>
               {template.id !== "minimal" && (
                 <div className={`${styles.headerStyle} text-white p-4 rounded-lg mb-4 shadow-md`}>
