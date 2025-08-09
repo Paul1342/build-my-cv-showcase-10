@@ -194,13 +194,50 @@ const CVBuilder = () => {
                   className="group overflow-hidden shadow-card hover:shadow-elegant transition-all duration-300 hover:-translate-y-2"
                 >
                   {/* Preview card */}
-                  <div className="h-80 bg-gradient-to-br from-primary/5 to-secondary/5 p-3 relative overflow-hidden">
-                    <div className="cv-a4-container h-full">
-                      <div className="cv-scale-to-fit" style={{ transform: "scale(0.25)" }}>
-                        <CVPreview data={sampleData} template={template} isPreview />
-                      </div>
-                    </div>
-                  </div>
+                {/* Preview Section — fixed-size thumbnail that truly centers */}
+<div className="bg-gradient-to-br from-primary/5 to-secondary/5 p-6 flex items-center justify-center">
+  {(() => {
+    // A4 design dimensions used by CVPreview in preview mode
+    const A4_W = 794;          // px
+    const A4_H = 1123;         // px
+
+    // Thumbnail target width (tweak 160–220px to taste)
+    const THUMB_W = 180;       // px
+    const scale   = THUMB_W / A4_W;
+    const THUMB_H = Math.round(A4_H * scale);
+
+    return (
+      <div
+        className="rounded-md shadow-card bg-white"
+        style={{
+          width: THUMB_W,
+          height: THUMB_H,
+          overflow: "hidden",
+          position: "relative"
+        }}
+      >
+        <div
+          style={{
+            width: A4_W,
+            height: A4_H,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            position: "absolute",
+            top: 0,
+            left: 0
+          }}
+        >
+          <CVPreview
+            data={sampleData}
+            template={template}
+            isPreview
+          />
+        </div>
+      </div>
+    );
+  })()}
+</div>
+
 
                   <div className="p-6 space-y-4">
                     <div>
