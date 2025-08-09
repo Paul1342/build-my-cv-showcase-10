@@ -9,59 +9,18 @@ import CVPreview from "@/components/CVPreview";
 import { CVData, CVTemplate } from "@/types/cv";
 import { getSampleDataForTemplate } from "@/data/sampleData";
 import { placeholderData } from "@/data/placeholderData";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import html2pdf from "html2pdf.js";
 
 const templates: CVTemplate[] = [
-  {
-    id: "professional",
-    name: "Professional Modern",
-    description: "Clean and modern design perfect for corporate roles",
-    features: ["Two Column", "Photo Optional", "ATS Friendly"],
-    hasPhoto: true,
-    columns: 2,
-    color: "blue"
-  },
-  {
-    id: "creative",
-    name: "Creative Portfolio",
-    description: "Stand out with this creative and colorful template",
-    features: ["Single Column", "Photo Required", "Creative Design"],
-    hasPhoto: true,
-    columns: 1,
-    color: "purple"
-  },
-  {
-    id: "executive",
-    name: "Executive Elite",
-    description: "Sophisticated design for senior-level positions",
-    features: ["Two Column", "Photo Optional", "Elegant"],
-    hasPhoto: true,
-    columns: 2,
-    color: "green"
-  },
-  {
-    id: "minimal",
-    name: "Minimalist Clean",
-    description: "Simple and clean design that focuses on content",
-    features: ["Single Column", "No Photo", "Minimal"],
-    hasPhoto: false,
-    columns: 1,
-    color: "gray"
-  }
+  { id: "professional", name: "Professional Modern", description: "Clean and modern design perfect for corporate roles", features: ["Two Column", "Photo Optional", "ATS Friendly"], hasPhoto: true, columns: 2, color: "blue" },
+  { id: "creative", name: "Creative Portfolio", description: "Stand out with this creative and colorful template", features: ["Single Column", "Photo Required", "Creative Design"], hasPhoto: true, columns: 1, color: "purple" },
+  { id: "executive", name: "Executive Elite", description: "Sophisticated design for senior-level positions", features: ["Two Column", "Photo Optional", "Elegant"], hasPhoto: true, columns: 2, color: "green" },
+  { id: "minimal", name: "Minimalist Clean", description: "Simple and clean design that focuses on content", features: ["Single Column", "No Photo", "Minimal"], hasPhoto: false, columns: 1, color: "gray" }
 ];
 
 const initialCVData: CVData = {
-  personalInfo: {
-    fullName: "",
-    jobTitle: "",
-    email: "",
-    phone: "",
-    address: "",
-    website: "",
-    photoUrl: ""
-  },
+  personalInfo: { fullName: "", jobTitle: "", email: "", phone: "", address: "", website: "", photoUrl: "" },
   summary: "",
   workExperience: [],
   education: [],
@@ -103,11 +62,10 @@ const CVBuilder = () => {
       if (!previewContainerRef.current || previewMode) return;
       const container = previewContainerRef.current;
       const containerWidth = container.clientWidth;
-      const cvWidth = 794; // fixed on-screen preview width
+      const cvWidth = 794; // on-screen preview width
       const scale = Math.min(containerWidth / cvWidth, 1);
       setPreviewScale(scale);
     };
-
     calculateScale();
     window.addEventListener("resize", calculateScale);
     return () => window.removeEventListener("resize", calculateScale);
@@ -117,33 +75,26 @@ const CVBuilder = () => {
     setSelectedTemplate(templateId);
     setCvData(placeholderData);
     setEditedFields({});
-    const template = templates.find((t) => t.id === templateId);
+    const template = templates.find(t => t.id === templateId);
     if (template) setTemplateColor(template.color);
   };
 
   const handleDataChange = (newData: CVData) => setCvData(newData);
 
-  // Always capture the hidden full-size A4 node via exportRef
+  // Export from hidden full-size A4 node
   const handleDownloadPDF = async () => {
     if (!exportRef.current || !selectedTemplate) return;
 
     try {
-      toast({
-        title: "Generating PDF...",
-        description: "Please wait while we create your CV.",
-      });
+      toast({ title: "Generating PDF...", description: "Please wait while we create your CV." });
 
-      // Make sure fonts & images are ready to avoid reflow (which looks like scaling)
+      // Ensure fonts & images are ready to avoid reflow differences
       if ("fonts" in document) {
         try { await (document as any).fonts.ready; } catch {}
       }
       const imgs = Array.from(exportRef.current.querySelectorAll("img"));
       await Promise.all(
-        imgs.map(img =>
-          img.complete
-            ? Promise.resolve()
-            : new Promise(res => { img.onload = img.onerror = () => res(null); })
-        )
+        imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = () => res(null); }))
       );
 
       const element = exportRef.current;
@@ -156,18 +107,10 @@ const CVBuilder = () => {
       };
 
       await html2pdf().set(opt).from(element).save();
-
-      toast({
-        title: "PDF Downloaded!",
-        description: "Your CV has been successfully downloaded.",
-      });
+      toast({ title: "PDF Downloaded!", description: "Your CV has been successfully downloaded." });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast({
-        title: "Download Failed",
-        description: "There was an error generating your PDF. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Download Failed", description: "There was an error generating your PDF. Please try again.", variant: "destructive" });
     }
   };
 
@@ -176,92 +119,84 @@ const CVBuilder = () => {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center gap-4 mb-8">
-            <Link to="/">
-              <Button variant="ghost" size="sm">
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Back to Home
-              </Button>
-            </Link>
+            <Link to="/"><Button variant="ghost" size="sm"><ChevronLeft className="w-4 h-4 mr-2" />Back to Home</Button></Link>
             <h1 className="text-3xl font-bold text-foreground">Choose Your Template</h1>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
             {templates.map((template) => {
               const sampleData = getSampleDataForTemplate(template.id);
+
+              // Thumbnail sizing
+              const A4_W = 794;
+              const A4_H = 1123;
+              const THUMB_W = 190;                // tweak 160–220 to taste
+              const scale = THUMB_W / A4_W;
+              const THUMB_H = Math.round(A4_H * scale);
+
               return (
                 <Card
                   key={template.id}
                   className="group overflow-hidden shadow-card hover:shadow-elegant transition-all duration-300 hover:-translate-y-2"
                 >
-                  {/* Preview card */}
-                {/* Preview Section — fixed-size thumbnail that truly centers */}
-<div className="bg-gradient-to-br from-primary/5 to-secondary/5 p-6 flex items-center justify-center">
-  {(() => {
-    // A4 design dimensions used by CVPreview in preview mode
-    const A4_W = 794;          // px
-    const A4_H = 1123;         // px
-
-    // Thumbnail target width (tweak 160–220px to taste)
-    const THUMB_W = 180;       // px
-    const scale   = THUMB_W / A4_W;
-    const THUMB_H = Math.round(A4_H * scale);
-
-    return (
-      <div
-        className="rounded-md shadow-card bg-white"
-        style={{
-          width: THUMB_W,
-          height: THUMB_H,
-          overflow: "hidden",
-          position: "relative"
-        }}
-      >
-        <div
-          style={{
-            width: A4_W,
-            height: A4_H,
-            transform: `scale(${scale})`,
-            transformOrigin: "top left",
-            position: "absolute",
-            top: 0,
-            left: 0
-          }}
-        >
-          <CVPreview
-            data={sampleData}
-            template={template}
-            isPreview
-          />
-        </div>
-      </div>
-    );
-  })()}
-</div>
-
-
-                  <div className="p-6 space-y-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-foreground mb-2">
-                        {template.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {template.description}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {template.features.map((feature, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {feature}
-                        </Badge>
-                      ))}
-                    </div>
-                    <Button
-                      variant="default"
-                      className="w-full"
-                      onClick={() => handleTemplateSelect(template.id)}
+                  {/* Thumbnail */}
+                  <div className="bg-gradient-to-br from-primary/5 to-secondary/5 p-6 flex items-center justify-center min-h-[220px]">
+                    <div
+                      className="rounded-md shadow-card bg-white"
+                      style={{
+                        width: THUMB_W,
+                        height: THUMB_H,
+                        overflow: "hidden",
+                        position: "relative",
+                      }}
                     >
-                      Use This Template
-                    </Button>
+                      <div
+                        style={{
+                          width: A4_W,
+                          height: A4_H,
+                          transform: `scale(${scale})`,
+                          transformOrigin: "top left",
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                        }}
+                      >
+                        <CVPreview data={sampleData} template={template} isPreview />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Info + narrower content column */}
+                  <div className="p-6 pb-8">
+                    <div className="max-w-[560px] mx-auto space-y-4">
+                      <div>
+                        <h3 className="text-xl font-semibold text-foreground mb-2">
+                          {template.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {template.description}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {template.features.map((feature, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">
+                            {feature}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      {/* Smaller, centered button */}
+                      <div className="pt-2">
+                        <Button
+                          variant="default"
+                          className="w-full sm:w-56 mx-auto block justify-center"
+                          onClick={() => handleTemplateSelect(template.id)}
+                        >
+                          Use This Template
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </Card>
               );
@@ -272,7 +207,7 @@ const CVBuilder = () => {
     );
   }
 
-  const currentTemplate = templates.find((t) => t.id === selectedTemplate)!;
+  const currentTemplate = templates.find(t => t.id === selectedTemplate)!;
 
   return (
     <div className="min-h-screen bg-background">
@@ -285,15 +220,12 @@ const CVBuilder = () => {
                 Back to Templates
               </Button>
               <div>
-                <h1 className="text-xl font-semibold text-foreground">
-                  {currentTemplate.name}
-                </h1>
+                <h1 className="text-xl font-semibold text-foreground">{currentTemplate.name}</h1>
                 <p className="text-sm text-muted-foreground">CV Builder</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Color selection */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Palette className="w-4 h-4 text-muted-foreground" />
@@ -338,18 +270,16 @@ const CVBuilder = () => {
 
       <div className="container mx-auto px-4 py-6">
         {previewMode ? (
-          // On-screen full-page preview (OK to keep)
           <div className="flex justify-center">
             <div ref={pdfRef} className="cv-page">
               <CVPreview
                 data={cvData}
                 template={{ ...currentTemplate, color: templateColor }}
-                isPDF={true}
+                isPDF
               />
             </div>
           </div>
         ) : (
-          // Editor + scaled on-screen preview
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="space-y-6">
               <CVEditor
@@ -371,7 +301,7 @@ const CVBuilder = () => {
                   style={{
                     transform: `scale(${previewScale})`,
                     transformOrigin: "top center",
-                    transition: "transform 0.2s ease-in-out",
+                    transition: "transform 0.2s ease-in-out"
                   }}
                 >
                   <CVPreview
@@ -387,15 +317,12 @@ const CVBuilder = () => {
         )}
 
         {/* Hidden A4 export node (off-screen but fully rendered at A4) */}
-        <div
-          aria-hidden="true"
-          style={{ position: "fixed", top: 0, left: "-10000px", zIndex: -1 }}
-        >
+        <div aria-hidden="true" style={{ position: "fixed", top: 0, left: "-10000px", zIndex: -1 }}>
           <div ref={exportRef} className="cv-page">
             <CVPreview
               data={cvData}
               template={{ ...currentTemplate, color: templateColor }}
-              isPDF={true}
+              isPDF
             />
           </div>
         </div>
