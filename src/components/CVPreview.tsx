@@ -48,8 +48,13 @@ const CVPreview = ({
       amber: { primary: "0, 0%, 49%", secondary: "0, 0%, 95%", accent: "0, 0%, 39%" },
       blue: { primary: "217, 91%, 60%", secondary: "217, 91%, 95%", accent: "217, 91%, 50%" },
       orange: { primary: "20, 90%, 48%", secondary: "20, 90%, 95%", accent: "20, 90%, 40%" },
-    };
-    return colorMap[(colorName as keyof typeof colorMap) || "slate"];
+    } as const;
+
+    const key = (Object.prototype.hasOwnProperty.call(colorMap, colorName)
+      ? (colorName as keyof typeof colorMap)
+      : ("slate" as const)) as keyof typeof colorMap;
+
+    return colorMap[key];
   };
 
   // Per-instance scoped CSS variables (no globals)
