@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Download, Eye, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 import CVEditor from "@/components/CVEditor";
@@ -13,10 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import html2pdf from "html2pdf.js";
 
 const templates: CVTemplate[] = [
-  { id: "professional", name: "Professional Modern", description: "Clean and modern design perfect for corporate roles", features: ["Two Column", "Photo Optional", "ATS Friendly"], hasPhoto: true, columns: 2, color: "blue" },
-  { id: "creative", name: "Creative Portfolio", description: "Stand out with this creative and colorful template", features: ["Single Column", "Photo Required", "Creative Design"], hasPhoto: true, columns: 1, color: "purple" },
-  { id: "executive", name: "Executive Elite", description: "Sophisticated design for senior-level positions", features: ["Two Column", "Photo Optional", "Elegant"], hasPhoto: true, columns: 2, color: "green" },
-  { id: "minimal", name: "Minimalist Clean", description: "Simple and clean design that focuses on content", features: ["Single Column", "No Photo", "Minimal"], hasPhoto: false, columns: 1, color: "gray" }
+  { id: "professional", name: "Professional Modern", description: "", features: [], hasPhoto: true, columns: 2, color: "blue" },
+  { id: "creative",     name: "Creative Portfolio",   description: "", features: [], hasPhoto: true, columns: 1, color: "purple" },
+  { id: "executive",    name: "Executive Elite",      description: "", features: [], hasPhoto: true, columns: 2, color: "green" },
+  { id: "minimal",      name: "Minimalist Clean",     description: "", features: [], hasPhoto: false, columns: 1, color: "gray" }
 ];
 
 const initialCVData: CVData = {
@@ -31,12 +29,12 @@ const initialCVData: CVData = {
 };
 
 const colorOptions = [
-  { value: "slate", label: "Slate", color: "hsl(215 25% 27%)" },
-  { value: "rose", label: "Rose", color: "hsl(11 70% 84%)" },
+  { value: "slate",   label: "Slate",   color: "hsl(215 25% 27%)" },
+  { value: "rose",    label: "Rose",    color: "hsl(11 70% 84%)" },
   { value: "emerald", label: "Emerald", color: "hsl(164 44% 80%)" },
-  { value: "amber", label: "Gray", color: "hsl(0 0% 49%)" },
-  { value: "blue", label: "Blue", color: "hsl(217 91% 60%)" },
-  { value: "orange", label: "Orange", color: "hsl(20 90% 48%)" }
+  { value: "amber",   label: "Gray",    color: "hsl(0 0% 49%)" },
+  { value: "blue",    label: "Blue",    color: "hsl(217 91% 60%)" },
+  { value: "orange",  label: "Orange",  color: "hsl(20 90% 48%)" }
 ];
 
 const CVBuilder = () => {
@@ -88,7 +86,6 @@ const CVBuilder = () => {
     try {
       toast({ title: "Generating PDF...", description: "Please wait while we create your CV." });
 
-      // Ensure fonts & images are ready to avoid reflow differences
       if ("fonts" in document) {
         try { await (document as any).fonts.ready; } catch {}
       }
@@ -114,6 +111,9 @@ const CVBuilder = () => {
     }
   };
 
+  // ===========================
+  // Template chooser (thumbnails are the buttons)
+  // ===========================
   if (!selectedTemplate) {
     return (
       <div className="min-h-screen bg-background">
@@ -123,31 +123,34 @@ const CVBuilder = () => {
             <h1 className="text-3xl font-bold text-foreground">Choose Your Template</h1>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {templates.map((template) => {
               const sampleData = getSampleDataForTemplate(template.id);
 
               // Thumbnail sizing
               const A4_W = 794;
               const A4_H = 1123;
-              const THUMB_W = 190;                // tweak 160–220 to taste
-              const scale = THUMB_W / A4_W;
-              const THUMB_H = Math.round(A4_H * scale);
+              const THUMB_W = 190; // tweak 160–220 if you want bigger/smaller
+              const scale    = THUMB_W / A4_W;
+              const THUMB_H  = Math.round(A4_H * scale);
 
               return (
-                <Card
+                <div
                   key={template.id}
-                  className="group overflow-hidden shadow-card hover:shadow-elegant transition-all duration-300 hover:-translate-y-2"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleTemplateSelect(template.id)}
+                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleTemplateSelect(template.id)}
+                  className="group cursor-pointer rounded-xl border border-border bg-card/60 hover:bg-card transition-smooth shadow-card hover:shadow-elegant outline-none focus:ring-2 focus:ring-primary/40"
                 >
-                  {/* Thumbnail */}
-                  <div className="bg-gradient-to-br from-primary/5 to-secondary/5 p-6 flex items-center justify-center min-h-[220px]">
+                  <div className="p-5 flex items-center justify-center">
                     <div
                       className="rounded-md shadow-card bg-white"
                       style={{
                         width: THUMB_W,
                         height: THUMB_H,
                         overflow: "hidden",
-                        position: "relative",
+                        position: "relative"
                       }}
                     >
                       <div
@@ -158,47 +161,14 @@ const CVBuilder = () => {
                           transformOrigin: "top left",
                           position: "absolute",
                           top: 0,
-                          left: 0,
+                          left: 0
                         }}
                       >
                         <CVPreview data={sampleData} template={template} isPreview />
                       </div>
                     </div>
                   </div>
-
-                  {/* Info + narrower content column */}
-                  <div className="p-6 pb-8">
-                    <div className="max-w-[560px] mx-auto space-y-4">
-                      <div>
-                        <h3 className="text-xl font-semibold text-foreground mb-2">
-                          {template.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {template.description}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {template.features.map((feature, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {feature}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      {/* Smaller, centered button */}
-                      <div className="pt-2">
-                        <Button
-                          variant="default"
-                          className="w-full sm:w-56 mx-auto block justify-center"
-                          onClick={() => handleTemplateSelect(template.id)}
-                        >
-                          Use This Template
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
+                </div>
               );
             })}
           </div>
@@ -207,6 +177,9 @@ const CVBuilder = () => {
     );
   }
 
+  // ===========================
+  // Builder / Preview / Export
+  // ===========================
   const currentTemplate = templates.find(t => t.id === selectedTemplate)!;
 
   return (
@@ -272,11 +245,7 @@ const CVBuilder = () => {
         {previewMode ? (
           <div className="flex justify-center">
             <div ref={pdfRef} className="cv-page">
-              <CVPreview
-                data={cvData}
-                template={{ ...currentTemplate, color: templateColor }}
-                isPDF
-              />
+              <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPDF />
             </div>
           </div>
         ) : (
@@ -291,11 +260,7 @@ const CVBuilder = () => {
               />
             </div>
             <div className="flex flex-col overflow-hidden">
-              <div
-                ref={previewContainerRef}
-                className="flex justify-center"
-                style={{ overflow: "hidden" }}
-              >
+              <div ref={previewContainerRef} className="flex justify-center" style={{ overflow: "hidden" }}>
                 <div
                   ref={!previewMode ? pdfRef : undefined}
                   style={{
@@ -319,11 +284,7 @@ const CVBuilder = () => {
         {/* Hidden A4 export node (off-screen but fully rendered at A4) */}
         <div aria-hidden="true" style={{ position: "fixed", top: 0, left: "-10000px", zIndex: -1 }}>
           <div ref={exportRef} className="cv-page">
-            <CVPreview
-              data={cvData}
-              template={{ ...currentTemplate, color: templateColor }}
-              isPDF
-            />
+            <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPDF />
           </div>
         </div>
       </div>
