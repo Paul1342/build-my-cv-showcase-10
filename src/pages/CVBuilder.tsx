@@ -318,56 +318,68 @@ const CVBuilder = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        {previewMode ? (
-          <div className="flex justify-center">
-            <div ref={pdfRef} className="cv-page">
-              <CVPreview
-                data={cvData}
-                template={{ ...currentTemplate, color: templateColor }}
-                isPDF={true}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="grid lg:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <CVEditor 
-                data={cvData}
-                onChange={handleDataChange}
-                template={currentTemplate}
-                editedFields={editedFields}
-                onFieldEdit={setEditedFields}
-              />
-            </div>
-            <div className="flex flex-col overflow-hidden">
-              <div 
-                ref={previewContainerRef}
-                className="flex justify-center"
-                style={{ overflow: 'hidden' }}
-              >
-                <div 
-                  ref={!previewMode ? pdfRef : undefined}
-                  style={{ 
-                    transform: `scale(${previewScale})`,
-                    transformOrigin: 'top center',
-                    transition: 'transform 0.2s ease-in-out'
-                  }}
-                >
-                  <CVPreview 
-                    data={cvData} 
-                    template={{...currentTemplate, color: templateColor}}
-                    isPreview
-                    isPDF={false}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+     <div className="container mx-auto px-4 py-6">
+  {previewMode ? (
+    <div className="flex justify-center">
+      <div ref={pdfRef} className="cv-page">
+        <CVPreview
+          data={cvData}
+          template={{ ...currentTemplate, color: templateColor }}
+          isPDF={true}
+        />
       </div>
     </div>
-  );
-};
+  ) : (
+    <div className="grid lg:grid-cols-2 gap-8">
+      <div className="space-y-6">
+        <CVEditor 
+          data={cvData}
+          onChange={handleDataChange}
+          template={currentTemplate}
+          editedFields={editedFields}
+          onFieldEdit={setEditedFields}
+        />
+      </div>
+      <div className="flex flex-col overflow-hidden">
+        <div 
+          ref={previewContainerRef}
+          className="flex justify-center"
+          style={{ overflow: 'hidden' }}
+        >
+          <div 
+            ref={!previewMode ? pdfRef : undefined}
+            style={{ 
+              transform: `scale(${previewScale})`,
+              transformOrigin: 'top center',
+              transition: 'transform 0.2s ease-in-out'
+            }}
+          >
+            <CVPreview 
+              data={cvData} 
+              template={{...currentTemplate, color: templateColor}}
+              isPreview
+              isPDF={false}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* Hidden A4 export node (off-screen but fully rendered at A4) */}
+  <div
+    aria-hidden="true"
+    style={{ position: 'fixed', top: 0, left: '-10000px', zIndex: -1 }}
+  >
+    <div ref={exportRef} className="cv-page">
+      <CVPreview
+        data={cvData}
+        template={{ ...currentTemplate, color: templateColor }}
+        isPDF={true}
+      />
+    </div>
+  </div>
+</div>
+
 
 export default CVBuilder;
