@@ -13,6 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import html2pdf from "html2pdf.js";
 
+
+// ADD this line near your other refs
+const exportRef = useRef<HTMLDivElement>(null);
+
+
 const templates: CVTemplate[] = [
   {
     id: "professional",
