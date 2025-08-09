@@ -11,109 +11,101 @@ interface CVPreviewProps {
   template: CVTemplate;
   isPreview?: boolean;
   isPDF?: boolean;
-  isFullPagePDF?: boolean;
+  isFullPagePDF?: boolean; // ignored now (cv-page is applied in CVBuilder)
 }
 
-const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPagePDF = false }: CVPreviewProps) => {
+const CVPreview = ({ data, template, isPreview = false, isPDF = false }: CVPreviewProps) => {
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short' 
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
     });
   };
 
   const getSkillLevel = (level: string) => {
     const levels = {
-      'Beginner': 25,
-      'Intermediate': 50,
-      'Advanced': 75,
-      'Expert': 100
+      Beginner: 25,
+      Intermediate: 50,
+      Advanced: 75,
+      Expert: 100,
     };
-    return levels[level as keyof typeof levels] || 50;
+    return (levels as any)[level] || 50;
   };
 
-  // Dynamic color generation based on template color
+  // Use stable physical units in PDF mode
+  const pdfTextSize = "text-[11pt]";  // change to 12pt if you prefer
+  const pdfPadding  = "";             // keep '' for edge-to-edge; or set 'p-[10mm]' for inner margins
+
+  // Dynamic color generation
   const getColorValues = (colorName: string) => {
     const colorMap = {
-      slate: { primary: "215, 25%, 27%", secondary: "215, 25%, 95%", accent: "215, 25%, 20%" },
-      rose: { primary: "11, 70%, 84%", secondary: "11, 70%, 95%", accent: "11, 70%, 74%" },
+      slate:   { primary: "215, 25%, 27%", secondary: "215, 25%, 95%", accent: "215, 25%, 20%" },
+      rose:    { primary: "11, 70%, 84%",  secondary: "11, 70%, 95%",  accent: "11, 70%, 74%" },
       emerald: { primary: "164, 44%, 80%", secondary: "164, 44%, 95%", accent: "164, 44%, 70%" },
-      amber: { primary: "0, 0%, 49%", secondary: "0, 0%, 95%", accent: "0, 0%, 39%" },
-      blue: { primary: "217, 91%, 60%", secondary: "217, 91%, 95%", accent: "217, 91%, 50%" },
-      orange: { primary: "20, 90%, 48%", secondary: "20, 90%, 95%", accent: "20, 90%, 40%" }
+      amber:   { primary: "0, 0%, 49%",    secondary: "0, 0%, 95%",    accent: "0, 0%, 39%" },
+      blue:    { primary: "217, 91%, 60%", secondary: "217, 91%, 95%", accent: "217, 91%, 50%" },
+      orange:  { primary: "20, 90%, 48%",  secondary: "20, 90%, 95%",  accent: "20, 90%, 40%" },
     };
-    return colorMap[colorName as keyof typeof colorMap] || colorMap.slate;
+    return (colorMap as any)[colorName] || colorMap.slate;
   };
 
   // Inject dynamic CSS variables
   useEffect(() => {
     const colors = getColorValues(template.color);
     const root = document.documentElement;
-    
-    // Set CSS custom properties for template colors
-    root.style.setProperty('--template-primary', colors.primary);
-    root.style.setProperty('--template-secondary', colors.secondary);
-    root.style.setProperty('--template-accent', colors.accent);
-    
+
+    root.style.setProperty("--template-primary", colors.primary);
+    root.style.setProperty("--template-secondary", colors.secondary);
+    root.style.setProperty("--template-accent", colors.accent);
+
     return () => {
-      // Cleanup when component unmounts
-      root.style.removeProperty('--template-primary');
-      root.style.removeProperty('--template-secondary');
-      root.style.removeProperty('--template-accent');
+      root.style.removeProperty("--template-primary");
+      root.style.removeProperty("--template-secondary");
+      root.style.removeProperty("--template-accent");
     };
   }, [template.color]);
 
-  // Get template-specific styles with CSS variables
   const getTemplateStyles = () => {
     const baseStyle = "transition-all duration-300";
-    
+
     const dynamicStyles = {
       sidebarBg: "cv-sidebar-bg",
       primaryColor: "cv-primary-text",
       accentColor: "cv-accent-bg",
       borderColor: "cv-primary-border",
-      skillBar: "cv-skill-bar"
+      skillBar: "cv-skill-bar",
     };
-    
+
     switch (template.id) {
-      case 'professional':
-        return {
-          ...dynamicStyles,
-          headerStyle: `${baseStyle} cv-header-professional`
-        };
-      case 'creative':
-        return {
-          ...dynamicStyles,
-          sidebarBg: "cv-sidebar-creative",
-          headerStyle: `${baseStyle} cv-header-creative`,
-          skillBar: "cv-skill-bar-creative"
-        };
-      case 'executive':
-        return {
-          ...dynamicStyles,
-          headerStyle: `${baseStyle} cv-header-executive`
-        };
-      case 'minimal':
-        return {
-          ...dynamicStyles,
-          headerStyle: `${baseStyle} cv-header-minimal`
-        };
+      case "professional":
+        return { ...dynamicStyles, headerStyle: `${baseStyle} cv-header-professional` };
+      case "creative":
+        return { ...dynamicStyles, sidebarBg: "cv-sidebar-creative", headerStyle: `${baseStyle} cv-header-creative`, skillBar: "cv-skill-bar-creative" };
+      case "executive":
+        return { ...dynamicStyles, headerStyle: `${baseStyle} cv-header-executive` };
+      case "minimal":
+        return { ...dynamicStyles, headerStyle: `${baseStyle} cv-header-minimal` };
       default:
-        return {
-          ...dynamicStyles,
-          headerStyle: baseStyle
-        };
+        return { ...dynamicStyles, headerStyle: baseStyle };
     }
   };
 
   const styles = getTemplateStyles();
 
   if (template.columns === 2) {
+    // ===========================
     // Two Column Layout
+    // ===========================
     const cvContent = (
-      <div className={`cv-a4 ${isPDF ? 'bg-white' : 'bg-background'} ${isPDF ? '' : 'border border-border rounded-lg shadow-card'} overflow-hidden ${isPreview ? 'text-xs' : 'text-sm'} cv-template`}>
+      <div
+        className={`${
+          isPDF ? "w-full h-full" : "cv-a4"
+        } ${isPDF ? "bg-white" : "bg-background"} ${
+          isPDF ? "" : "border border-border rounded-lg shadow-card"
+        } ${isPDF ? pdfTextSize : (isPreview ? "text-xs" : "text-sm")} overflow-hidden cv-template`}
+      >
         <style>
           {`
             .cv-template {
@@ -134,27 +126,22 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
             .cv-header-minimal { border-bottom: 2px solid hsl(var(--template-primary)); }
           `}
         </style>
+
         <div className="flex h-full">
           {/* Left Sidebar */}
-          <div className={`w-1/3 ${styles.sidebarBg} ${isPDF ? 'p-0' : 'p-6'} space-y-6`}>
+          <div className={`w-1/3 ${styles.sidebarBg} ${isPDF ? pdfPadding : "p-6"} space-y-6`}>
             {/* Photo */}
             {template.hasPhoto && (
               <div className="text-center">
-                <img 
-                  src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL} 
+                <img
+                  src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL}
                   alt="Profile"
                   className={`w-24 h-24 rounded-full mx-auto object-cover border-4 ${styles.borderColor}/20 shadow-md`}
-                  onError={(e) => {
-                    console.log('Image failed to load:', e.currentTarget.src);
-                    console.log('Data photoUrl:', data.personalInfo.photoUrl);
-                    console.log('DEFAULT_AVATAR_URL:', DEFAULT_AVATAR_URL);
-                  }}
-                  onLoad={() => console.log('Image loaded successfully:', data.personalInfo.photoUrl || DEFAULT_AVATAR_URL)}
                 />
               </div>
             )}
 
-            {/* Contact Information */}
+            {/* Contact */}
             <div>
               <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>
                 Contact
@@ -201,10 +188,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                         <span className="text-xs text-muted-foreground">{skill.level}</span>
                       </div>
                       <div className="w-full bg-muted/50 rounded-full h-2">
-                        <div 
-                          className={`${styles.skillBar} h-2 rounded-full transition-all duration-500`}
-                          style={{ width: `${getSkillLevel(skill.level)}%` }}
-                        />
+                        <div className={`${styles.skillBar} h-2 rounded-full transition-all duration-500`} style={{ width: `${getSkillLevel(skill.level)}%` }} />
                       </div>
                     </div>
                   ))}
@@ -222,9 +206,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                   {data.languages.map((lang) => (
                     <div key={lang.id} className="flex items-center justify-between">
                       <span className="text-xs font-medium">{lang.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {lang.proficiency}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{lang.proficiency}</span>
                     </div>
                   ))}
                 </div>
@@ -277,31 +259,22 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                 </div>
               </div>
             )}
-
           </div>
 
           {/* Right Content */}
-          <div className={`flex-1 ${isPDF ? 'p-0' : 'p-6'} space-y-6`}>
+          <div className={`flex-1 ${isPDF ? pdfPadding : "p-6"} space-y-6`}>
             {/* Header */}
-            <div className={`${template.id === 'minimal' ? styles.headerStyle + ' pb-4' : 'border-b border-border pb-4'}`}>
-              {template.id !== 'minimal' && (
+            <div className={`${template.id === "minimal" ? styles.headerStyle + " pb-4" : "border-b border-border pb-4"}`}>
+              {template.id !== "minimal" && (
                 <div className={`${styles.headerStyle} text-white p-4 rounded-lg mb-4 shadow-md`}>
-                  <h1 className="text-2xl font-bold mb-1">
-                    {data.personalInfo.fullName || "Your Name"}
-                  </h1>
-                  <p className="text-lg opacity-90">
-                    {data.personalInfo.jobTitle || "Your Job Title"}
-                  </p>
+                  <h1 className="text-2xl font-bold mb-1">{data.personalInfo.fullName || "Your Name"}</h1>
+                  <p className="text-lg opacity-90">{data.personalInfo.jobTitle || "Your Job Title"}</p>
                 </div>
               )}
-              {template.id === 'minimal' && (
+              {template.id === "minimal" && (
                 <>
-                  <h1 className={`text-2xl font-bold ${styles.primaryColor} mb-1`}>
-                    {data.personalInfo.fullName || "Your Name"}
-                  </h1>
-                  <p className="text-lg text-muted-foreground">
-                    {data.personalInfo.jobTitle || "Your Job Title"}
-                  </p>
+                  <h1 className={`text-2xl font-bold ${styles.primaryColor} mb-1`}>{data.personalInfo.fullName || "Your Name"}</h1>
+                  <p className="text-lg text-muted-foreground">{data.personalInfo.jobTitle || "Your Job Title"}</p>
                 </>
               )}
             </div>
@@ -321,10 +294,10 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                 <div className="space-y-6">
                   {data.workExperience.map((exp) => (
                     <div key={exp.id} className="relative">
-                      {template.id === 'creative' && (
-                        <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`}></div>
+                      {template.id === "creative" && (
+                        <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`} />
                       )}
-                      <div className={`${template.id === 'creative' ? 'pl-4' : ''}`}>
+                      <div className={`${template.id === "creative" ? "pl-4" : ""}`}>
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h4 className="font-semibold text-foreground text-base">{exp.jobTitle}</h4>
@@ -333,14 +306,16 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                           <div className="text-right text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
-                              {formatDate(exp.startDate)} - {exp.current ? 'Present' : formatDate(exp.endDate)}
+                              {formatDate(exp.startDate)} - {exp.current ? "Present" : formatDate(exp.endDate)}
                             </div>
                           </div>
                         </div>
                         {exp.responsibilities.length > 0 && (
                           <ul className="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-                            {exp.responsibilities.filter(r => r.trim()).map((resp, index) => (
-                              <li key={index} className="text-sm leading-relaxed">{resp}</li>
+                            {exp.responsibilities.filter((r) => r.trim()).map((resp, index) => (
+                              <li key={index} className="text-sm leading-relaxed">
+                                {resp}
+                              </li>
                             ))}
                           </ul>
                         )}
@@ -358,10 +333,10 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                 <div className="space-y-6">
                   {data.education.map((edu) => (
                     <div key={edu.id} className="relative">
-                      {template.id === 'creative' && (
-                        <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`}></div>
+                      {template.id === "creative" && (
+                        <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`} />
                       )}
-                      <div className={`${template.id === 'creative' ? 'pl-4' : ''}`}>
+                      <div className={`${template.id === "creative" ? "pl-4" : ""}`}>
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h4 className="font-semibold text-foreground text-base">{edu.degree}</h4>
@@ -375,11 +350,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                             </div>
                           </div>
                         </div>
-                        {edu.grade && (
-                          <div className="text-sm text-muted-foreground">
-                            Grade: {edu.grade}
-                          </div>
-                        )}
+                        {edu.grade && <div className="text-sm text-muted-foreground">Grade: {edu.grade}</div>}
                       </div>
                     </div>
                   ))}
@@ -391,18 +362,19 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
       </div>
     );
 
-    return isFullPagePDF ? <div className="cv-page">{cvContent}</div> : cvContent;
+    return cvContent;
   } else {
+    // ===========================
     // Single Column Layout
+    // ===========================
     const cvContent = (
       <div
-  className={`${
-    isPDF ? 'w-full h-full' : 'cv-a4'
-  } ${isPDF ? 'bg-white' : 'bg-background'} ${
-    isPDF ? '' : 'border border-border rounded-lg shadow-card'
-  } ${isPDF ? '' : 'p-6'} ${isPreview ? 'text-xs' : 'text-sm'} space-y-6 cv-template`}
->
-
+        className={`${
+          isPDF ? "w-full h-full" : "cv-a4"
+        } ${isPDF ? "bg-white" : "bg-background"} ${
+          isPDF ? "" : "border border-border rounded-lg shadow-card"
+        } ${isPDF ? pdfPadding : "p-6"} ${isPDF ? pdfTextSize : (isPreview ? "text-xs" : "text-sm")} space-y-6 cv-template`}
+      >
         <style>
           {`
             .cv-template {
@@ -423,31 +395,22 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
             .cv-header-minimal { border-bottom: 2px solid hsl(var(--template-primary)); }
           `}
         </style>
+
         {/* Header */}
-        <div className={`text-center ${template.id === 'minimal' ? styles.headerStyle + ' pb-6' : 'border-b border-border pb-6'}`}>
-          {template.id !== 'minimal' && (
-            <div className={`${styles.headerStyle} text-white ${isPDF ? 'p-4' : 'p-6'} rounded-lg mb-6 shadow-md`}>
+        <div className={`text-center ${template.id === "minimal" ? styles.headerStyle + " pb-6" : "border-b border-border pb-6"}`}>
+          {template.id !== "minimal" && (
+            <div className={`${styles.headerStyle} text-white p-4 rounded-lg mb-6 shadow-md`}>
               {template.hasPhoto && (
-                <img 
-                  src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL} 
+                <img
+                  src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL}
                   alt="Profile"
                   className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-white/20 mb-4 shadow-lg"
-                  onError={(e) => {
-                    console.log('Image failed to load (single-column):', e.currentTarget.src);
-                    console.log('Data photoUrl:', data.personalInfo.photoUrl);
-                    console.log('DEFAULT_AVATAR_URL:', DEFAULT_AVATAR_URL);
-                  }}
-                  onLoad={() => console.log('Image loaded successfully (single-column):', data.personalInfo.photoUrl || DEFAULT_AVATAR_URL)}
                 />
               )}
-              <h1 className="text-3xl font-bold mb-2">
-                {data.personalInfo.fullName || "Your Name"}
-              </h1>
-              <p className="text-xl opacity-90 mb-4">
-                {data.personalInfo.jobTitle || "Your Job Title"}
-              </p>
-              
-              {/* Contact Info */}
+              <h1 className="text-3xl font-bold mb-2">{data.personalInfo.fullName || "Your Name"}</h1>
+              <p className="text-xl opacity-90 mb-4">{data.personalInfo.jobTitle || "Your Job Title"}</p>
+
+              {/* Contact */}
               <div className="flex flex-wrap justify-center gap-4 text-sm text-white/80">
                 {data.personalInfo.email && (
                   <div className="flex items-center gap-1">
@@ -470,30 +433,20 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
               </div>
             </div>
           )}
-          
-          {template.id === 'minimal' && (
+
+          {template.id === "minimal" && (
             <>
               {template.hasPhoto && (
-                <img 
-                  src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL} 
+                <img
+                  src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL}
                   alt="Profile"
                   className={`w-24 h-24 rounded-full mx-auto object-cover border-4 ${styles.borderColor}/20 mb-4 shadow-md`}
-                  onError={(e) => {
-                    console.log('Image failed to load (minimal):', e.currentTarget.src);
-                    console.log('Data photoUrl:', data.personalInfo.photoUrl);
-                    console.log('DEFAULT_AVATAR_URL:', DEFAULT_AVATAR_URL);
-                  }}
-                  onLoad={() => console.log('Image loaded successfully (minimal):', data.personalInfo.photoUrl || DEFAULT_AVATAR_URL)}
                 />
               )}
-              <h1 className={`text-3xl font-bold ${styles.primaryColor} mb-2`}>
-                {data.personalInfo.fullName || "Your Name"}
-              </h1>
-              <p className="text-xl text-muted-foreground mb-4">
-                {data.personalInfo.jobTitle || "Your Job Title"}
-              </p>
-              
-              {/* Contact Info */}
+              <h1 className={`text-3xl font-bold ${styles.primaryColor} mb-2`}>{data.personalInfo.fullName || "Your Name"}</h1>
+              <p className="text-xl text-muted-foreground mb-4">{data.personalInfo.jobTitle || "Your Job Title"}</p>
+
+              {/* Contact */}
               <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
                 {data.personalInfo.email && (
                   <div className="flex items-center gap-1">
@@ -537,10 +490,10 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
             <div className="space-y-6">
               {data.workExperience.map((exp) => (
                 <div key={exp.id} className="relative">
-                  {template.id === 'creative' && (
-                    <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`}></div>
+                  {template.id === "creative" && (
+                    <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`} />
                   )}
-                  <div className={`${template.id === 'creative' ? 'pl-4' : ''}`}>
+                  <div className={`${template.id === "creative" ? "pl-4" : ""}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h4 className="font-semibold text-foreground text-base">{exp.jobTitle}</h4>
@@ -549,14 +502,16 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                       <div className="text-right text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          {formatDate(exp.startDate)} - {exp.current ? 'Present' : formatDate(exp.endDate)}
+                          {formatDate(exp.startDate)} - {exp.current ? "Present" : formatDate(exp.endDate)}
                         </div>
                       </div>
                     </div>
                     {exp.responsibilities.length > 0 && (
                       <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                        {exp.responsibilities.filter(r => r.trim()).map((resp, index) => (
-                          <li key={index} className="text-sm leading-relaxed">{resp}</li>
+                        {exp.responsibilities.filter((r) => r.trim()).map((resp, index) => (
+                          <li key={index} className="text-sm leading-relaxed">
+                            {resp}
+                          </li>
                         ))}
                       </ul>
                     )}
@@ -584,9 +539,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                     <div className="text-sm text-muted-foreground">
                       {formatDate(edu.startDate)} - {formatDate(edu.endDate)}
                     </div>
-                    {edu.grade && (
-                      <div className="text-sm text-muted-foreground">Grade: {edu.grade}</div>
-                    )}
+                    {edu.grade && <div className="text-sm text-muted-foreground">Grade: {edu.grade}</div>}
                   </div>
                 ))}
               </div>
@@ -607,10 +560,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                       <span className="text-sm text-muted-foreground">{skill.level}</span>
                     </div>
                     <div className="w-full bg-muted/50 rounded-full h-2">
-                      <div 
-                        className={`${styles.skillBar} h-2 rounded-full transition-all duration-500`}
-                        style={{ width: `${getSkillLevel(skill.level)}%` }}
-                      />
+                      <div className={`${styles.skillBar} h-2 rounded-full transition-all duration-500`} style={{ width: `${getSkillLevel(skill.level)}%` }} />
                     </div>
                   </div>
                 ))}
@@ -631,9 +581,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
                 {data.languages.map((lang) => (
                   <div key={lang.id} className="flex items-center justify-between">
                     <span className="text-sm font-medium">{lang.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {lang.proficiency}
-                    </span>
+                    <span className="text-sm text-muted-foreground">{lang.proficiency}</span>
                   </div>
                 ))}
               </div>
@@ -690,7 +638,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
       </div>
     );
 
-    return isFullPagePDF ? <div className="cv-page">{cvContent}</div> : cvContent;
+    return cvContent;
   }
 };
 
