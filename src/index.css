@@ -70,15 +70,12 @@ All colors MUST be HSL.
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
 
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
 
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
 
     --sidebar-border: 220 13% 91%;
@@ -158,7 +155,7 @@ All colors MUST be HSL.
     transform-origin: center center;
   }
   
-  /* PDF Export - Exact A4 dimensions for html2pdf */
+  /* PDF Export - Exact A4 dimensions for on-screen single-page nodes */
   .cv-page {
     width: 210mm;
     height: 297mm;
@@ -168,6 +165,24 @@ All colors MUST be HSL.
     overflow: hidden;
     box-sizing: border-box;
   }
+
+  /* NEW: Auto-height A4 for multi-page exports (used by html2pdf) */
+  .cv-export {
+    width: 210mm;         /* fixed A4 width */
+    min-height: 297mm;    /* at least one page tall */
+    height: auto;         /* allow content to grow and be split across pages */
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    overflow: visible;    /* let html2pdf slice pages, don't clip */
+    box-sizing: border-box;
+    position: relative;
+  }
+
+  /* Optional page-break helpers (work with html2pdf pagebreak: { mode: ['css','legacy'] }) */
+  .page-break { break-before: page; }
+  .avoid-break-inside { break-inside: avoid; }
+  .avoid-break-after { break-after: avoid; }
   
   /* Print styles for PDF export */
   @media print {
