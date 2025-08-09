@@ -1,3 +1,4 @@
+// src/pages/CVBuilder.tsx
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,7 +22,7 @@ const templates: CVTemplate[] = [
     features: ["Two Column", "Photo Optional", "ATS Friendly"],
     hasPhoto: true,
     columns: 2,
-    color: "blue"
+    color: "blue",
   },
   {
     id: "creative",
@@ -30,7 +31,7 @@ const templates: CVTemplate[] = [
     features: ["Single Column", "Photo Required", "Creative Design"],
     hasPhoto: true,
     columns: 1,
-    color: "purple"
+    color: "purple",
   },
   {
     id: "executive",
@@ -39,7 +40,7 @@ const templates: CVTemplate[] = [
     features: ["Two Column", "Photo Optional", "Elegant"],
     hasPhoto: true,
     columns: 2,
-    color: "green"
+    color: "green",
   },
   {
     id: "minimal",
@@ -48,8 +49,8 @@ const templates: CVTemplate[] = [
     features: ["Single Column", "No Photo", "Minimal"],
     hasPhoto: false,
     columns: 1,
-    color: "gray"
-  }
+    color: "gray",
+  },
 ];
 
 const initialCVData: CVData = {
@@ -60,7 +61,7 @@ const initialCVData: CVData = {
     phone: "",
     address: "",
     website: "",
-    photoUrl: ""
+    photoUrl: "",
   },
   summary: "",
   workExperience: [],
@@ -68,7 +69,7 @@ const initialCVData: CVData = {
   skills: [],
   languages: [],
   certifications: [],
-  references: []
+  references: [],
 };
 
 const colorOptions = [
@@ -77,7 +78,7 @@ const colorOptions = [
   { value: "emerald", label: "Emerald", color: "hsl(164 44% 80%)" },
   { value: "amber", label: "Gray", color: "hsl(0 0% 49%)" },
   { value: "blue", label: "Blue", color: "hsl(217 91% 60%)" },
-  { value: "orange", label: "Orange", color: "hsl(20 90% 48%)" }
+  { value: "orange", label: "Orange", color: "hsl(20 90% 48%)" },
 ];
 
 const CVBuilder = () => {
@@ -87,18 +88,24 @@ const CVBuilder = () => {
   const [templateColor, setTemplateColor] = useState<string>("blue");
   const [previewScale, setPreviewScale] = useState(1);
   const [editedFields, setEditedFields] = useState<Record<string, boolean>>({});
-  const pdfRef = useRef<HTMLDivElement>(null);            // on-screen preview ref (scaled)
-  const exportRef = useRef<HTMLDivElement>(null);         // off-screen full-size A4 export ref
+
+  // On-screen preview refs
+  const pdfRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+
+  // Off-screen A4 export ref (used by html2pdf)
+  const exportRef = useRef<HTMLDivElement>(null);
+
   const { toast } = useToast();
 
   // Calculate responsive scale for on-screen preview
   useEffect(() => {
     const calculateScale = () => {
       if (!previewContainerRef.current || previewMode) return;
+
       const container = previewContainerRef.current;
       const containerWidth = container.clientWidth;
-      const cvWidth = 794; // Fixed CV width for on-screen preview
+      const cvWidth = 794; // fixed on-screen preview width
       const scale = Math.min(containerWidth / cvWidth, 1);
       setPreviewScale(scale);
     };
@@ -116,10 +123,9 @@ const CVBuilder = () => {
     if (template) setTemplateColor(template.color);
   };
 
-  const handleDataChange = (newData: CVData) => {
-    setCvData(newData);
-  };
+  const handleDataChange = (newData: CVData) => setCvData(newData);
 
+  // >>> PDF EXPORT: always capture the hidden full-size A4 node via exportRef
   const handleDownloadPDF = async () => {
     if (!exportRef.current || !selectedTemplate) return;
 
@@ -134,10 +140,7 @@ const CVBuilder = () => {
         margin: 0,
         filename: "my-cv.pdf",
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 3.78, // ~300 DPI
-          useCORS: true,
-        },
+        html2canvas: { scale: 3.78, useCORS: true }, // ~300 DPI
         jsPDF: { unit: "mm", format: [210, 297], orientation: "portrait" },
       };
 
@@ -179,7 +182,7 @@ const CVBuilder = () => {
                   key={template.id}
                   className="group overflow-hidden shadow-card hover:shadow-elegant transition-all duration-300 hover:-translate-y-2"
                 >
-                  {/* Preview Section - Portrait CV preview */}
+                  {/* Preview Section - portrait card */}
                   <div className="h-80 bg-gradient-to-br from-primary/5 to-secondary/5 p-3 relative overflow-hidden">
                     <div className="cv-a4-container h-full">
                       <div className="cv-scale-to-fit" style={{ transform: "scale(0.25)" }}>
@@ -188,15 +191,13 @@ const CVBuilder = () => {
                     </div>
                   </div>
 
-                  {/* Info Section - Separated from preview */}
+                  {/* Info Section */}
                   <div className="p-6 space-y-4">
                     <div>
                       <h3 className="text-xl font-semibold text-foreground mb-2">
                         {template.name}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {template.description}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{template.description}</p>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -237,15 +238,13 @@ const CVBuilder = () => {
                 Back to Templates
               </Button>
               <div>
-                <h1 className="text-xl font-semibold text-foreground">
-                  {currentTemplate.name}
-                </h1>
+                <h1 className="text-xl font-semibold text-foreground">{currentTemplate.name}</h1>
                 <p className="text-sm text-muted-foreground">CV Builder</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Color Selection - Modern Style */}
+              {/* Color Selection */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Palette className="w-4 h-4 text-muted-foreground" />
@@ -273,10 +272,12 @@ const CVBuilder = () => {
                   ))}
                 </div>
               </div>
+
               <Button variant="outline" size="sm" onClick={() => setPreviewMode(!previewMode)}>
                 <Eye className="w-4 h-4 mr-2" />
                 {previewMode ? "Edit" : "Preview"}
               </Button>
+
               <Button variant="default" size="sm" onClick={handleDownloadPDF}>
                 <Download className="w-4 h-4 mr-2" />
                 Download PDF
@@ -288,6 +289,7 @@ const CVBuilder = () => {
 
       <div className="container mx-auto px-4 py-6">
         {previewMode ? (
+          // On-screen full-page preview (ok to keep)
           <div className="flex justify-center">
             <div ref={pdfRef} className="cv-page">
               <CVPreview
@@ -298,6 +300,7 @@ const CVBuilder = () => {
             </div>
           </div>
         ) : (
+          // Editor + scaled on-screen preview
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="space-y-6">
               <CVEditor
