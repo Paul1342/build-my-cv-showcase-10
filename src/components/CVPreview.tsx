@@ -136,7 +136,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
         </style>
         <div className="flex h-full">
           {/* Left Sidebar */}
-          <div className={`w-1/3 ${styles.sidebarBg} p-6 space-y-6`}>
+          <div className={`w-1/3 ${styles.sidebarBg} ${isPDF ? 'p-0' : 'p-6'} space-y-6`}>
             {/* Photo */}
             {template.hasPhoto && (
               <div className="text-center">
@@ -281,7 +281,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
           </div>
 
           {/* Right Content */}
-          <div className="flex-1 p-6 space-y-6">
+          <div className={`flex-1 ${isPDF ? 'p-0' : 'p-6'} space-y-6`}>
             {/* Header */}
             <div className={`${template.id === 'minimal' ? styles.headerStyle + ' pb-4' : 'border-b border-border pb-4'}`}>
               {template.id !== 'minimal' && (
@@ -395,7 +395,14 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
   } else {
     // Single Column Layout
     const cvContent = (
-      <div className={`cv-a4 ${isPDF ? 'bg-white' : 'bg-background'} ${isPDF ? '' : 'border border-border rounded-lg shadow-card'} p-6 ${isPreview ? 'text-xs' : 'text-sm'} space-y-6 cv-template`}>
+      <div
+  className={`${
+    isPDF ? 'w-full h-full' : 'cv-a4'
+  } ${isPDF ? 'bg-white' : 'bg-background'} ${
+    isPDF ? '' : 'border border-border rounded-lg shadow-card'
+  } ${isPDF ? '' : 'p-6'} ${isPreview ? 'text-xs' : 'text-sm'} space-y-6 cv-template`}
+>
+
         <style>
           {`
             .cv-template {
@@ -419,7 +426,7 @@ const CVPreview = ({ data, template, isPreview = false, isPDF = false, isFullPag
         {/* Header */}
         <div className={`text-center ${template.id === 'minimal' ? styles.headerStyle + ' pb-6' : 'border-b border-border pb-6'}`}>
           {template.id !== 'minimal' && (
-            <div className={`${styles.headerStyle} text-white p-6 rounded-lg mb-6 shadow-md`}>
+            <div className={`${styles.headerStyle} text-white ${isPDF ? 'p-4' : 'p-6'} rounded-lg mb-6 shadow-md`}>
               {template.hasPhoto && (
                 <img 
                   src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL} 
