@@ -125,7 +125,8 @@ const CVBuilder = () => {
             <h1 className="text-3xl font-bold text-foreground">Choose Your Template</h1>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-5 justify-items-center">
+
             {templates.map((template) => {
               const sampleData = getSampleDataForTemplate(template.id);
 
