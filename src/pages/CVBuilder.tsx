@@ -177,4 +177,179 @@ const CVBuilder = () => {
               return (
                 <Card
                   key={template.id}
-                  className="group overflow-hidden shadow-card hover:shadow-elegant transition-a
+                  className="group overflow-hidden shadow-card hover:shadow-elegant transition-all duration-300 hover:-translate-y-2"
+                >
+                  {/* Preview Section - Portrait CV preview */}
+                  <div className="h-80 bg-gradient-to-br from-primary/5 to-secondary/5 p-3 relative overflow-hidden">
+                    <div className="cv-a4-container h-full">
+                      <div className="cv-scale-to-fit" style={{ transform: "scale(0.25)" }}>
+                        <CVPreview data={sampleData} template={template} isPreview />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Info Section - Separated from preview */}
+                  <div className="p-6 space-y-4">
+                    <div>
+                      <h3 className="text-xl font-semibold text-foreground mb-2">
+                        {template.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {template.description}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {template.features.map((feature, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {feature}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    <Button
+                      variant="default"
+                      className="w-full"
+                      onClick={() => handleTemplateSelect(template.id)}
+                    >
+                      Use This Template
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentTemplate = templates.find((t) => t.id === selectedTemplate)!;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="border-b border-border bg-card">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedTemplate(null)}>
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Back to Templates
+              </Button>
+              <div>
+                <h1 className="text-xl font-semibold text-foreground">
+                  {currentTemplate.name}
+                </h1>
+                <p className="text-sm text-muted-foreground">CV Builder</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Color Selection - Modern Style */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">Color</span>
+                </div>
+                <div className="flex gap-1.5 p-1 bg-muted/50 rounded-lg">
+                  {colorOptions.map((color) => (
+                    <button
+                      key={color.value}
+                      onClick={() => setTemplateColor(color.value)}
+                      className={`w-7 h-7 rounded-full border-2 transition-all duration-300 hover:scale-110 relative ${
+                        templateColor === color.value
+                          ? "border-background shadow-lg scale-110 ring-2 ring-primary/20"
+                          : "border-white/80 shadow-sm hover:border-white"
+                      }`}
+                      style={{ backgroundColor: color.color }}
+                      title={color.label}
+                    >
+                      {templateColor === color.value && (
+                        <div className="absolute inset-0 rounded-full bg-white/20 flex items-center justify-center">
+                          <div className="w-2 h-2 bg-white rounded-full" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setPreviewMode(!previewMode)}>
+                <Eye className="w-4 h-4 mr-2" />
+                {previewMode ? "Edit" : "Preview"}
+              </Button>
+              <Button variant="default" size="sm" onClick={handleDownloadPDF}>
+                <Download className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-6">
+        {previewMode ? (
+          <div className="flex justify-center">
+            <div ref={pdfRef} className="cv-page">
+              <CVPreview
+                data={cvData}
+                template={{ ...currentTemplate, color: templateColor }}
+                isPDF={true}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="grid lg:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <CVEditor
+                data={cvData}
+                onChange={handleDataChange}
+                template={currentTemplate}
+                editedFields={editedFields}
+                onFieldEdit={setEditedFields}
+              />
+            </div>
+            <div className="flex flex-col overflow-hidden">
+              <div
+                ref={previewContainerRef}
+                className="flex justify-center"
+                style={{ overflow: "hidden" }}
+              >
+                <div
+                  ref={!previewMode ? pdfRef : undefined}
+                  style={{
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: "top center",
+                    transition: "transform 0.2s ease-in-out",
+                  }}
+                >
+                  <CVPreview
+                    data={cvData}
+                    template={{ ...currentTemplate, color: templateColor }}
+                    isPreview
+                    isPDF={false}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Hidden A4 export node (off-screen but fully rendered at A4) */}
+        <div
+          aria-hidden="true"
+          style={{ position: "fixed", top: 0, left: "-10000px", zIndex: -1 }}
+        >
+          <div ref={exportRef} className="cv-page">
+            <CVPreview
+              data={cvData}
+              template={{ ...currentTemplate, color: templateColor }}
+              isPDF={true}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CVBuilder;
