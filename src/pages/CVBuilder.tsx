@@ -45,25 +45,25 @@ const CVBuilder = () => {
   const [previewScale, setPreviewScale] = useState(1);
   const [editedFields, setEditedFields] = useState<Record<string, boolean>>({});
 
-  // per-thumbnail color choice
+  // per-thumbnail color choice (template chooser)
   const [thumbColors, setThumbColors] = useState<Record<string, string>>({});
 
   // On-screen preview refs
   const pdfRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
-  // Off-screen export ref
+  // Off-screen export ref (html2pdf source)
   const exportRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
 
-  // Scale on-screen preview to fit its pane
+  // Scale on-screen preview to fit its column (width-based)
   useEffect(() => {
     const calculateScale = () => {
       if (!previewContainerRef.current || previewMode) return;
       const container = previewContainerRef.current;
       const containerWidth = container.clientWidth;
-      const cvWidth = 794; // on-screen width
+      const cvWidth = 794; // A4 @96dpi width used in CVPreview
       const scale = Math.min(containerWidth / cvWidth, 1);
       setPreviewScale(scale);
     };
@@ -76,18 +76,21 @@ const CVBuilder = () => {
     setSelectedTemplate(templateId);
     setCvData(placeholderData);
     setEditedFields({});
-    setTemplateColor(chosenColor || thumbColors[templateId] || (templates.find(t => t.id === templateId)?.color ?? "blue"));
+    setTemplateColor(
+      chosenColor || thumbColors[templateId] || (templates.find(t => t.id === templateId)?.color ?? "blue")
+    );
   };
 
   const handleDataChange = (newData: CVData) => setCvData(newData);
 
-  // Export from hidden unbounded node (auto-paginates)
+  // Export from hidden unbounded node (lets html2pdf auto-paginate)
   const handleDownloadPDF = async () => {
     if (!exportRef.current || !selectedTemplate) return;
 
     try {
       toast({ title: "Generating PDF...", description: "Please wait while we create your CV." });
 
+      // Wait for fonts & images (reduces layout shifts before rasterization)
       if ("fonts" in document) {
         try { await (document as any).fonts.ready; } catch {}
       }
@@ -98,49 +101,55 @@ const CVBuilder = () => {
 
       const element = exportRef.current;
       const opt = {
-        margin: 0,
-        filename: "my-cv.pdf",
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 3.78, useCORS: true }, // ~300 DPI
-        jsPDF: { unit: "mm", format: [210, 297], orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"] } // let it split cleanly
+        margin:       0,
+        filename:     "my-cv.pdf",
+        image:        { type: "jpeg", quality: 0.98 },
+        html2canvas:  { scale: 3.78, useCORS: true },     // ~300 DPI
+        jsPDF:        { unit: "mm", format: [210, 297], orientation: "portrait" },
+        pagebreak:    { mode: ["css", "legacy"] }         // respect .page-break/.avoid-break-*
       } as const;
 
       await (html2pdf() as any).set(opt).from(element).save();
       toast({ title: "PDF Downloaded!", description: "Your CV has been successfully downloaded." });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast({ title: "Download Failed", description: "There was an error generating your PDF. Please try again.", variant: "destructive" });
+      toast({
+        title: "Download Failed",
+        description: "There was an error generating your PDF. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   // ===========================
-  // Template chooser (3 per row, CV is the button, color preview below)
+  // Template chooser
   // ===========================
   if (!selectedTemplate) {
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center gap-4 mb-8">
-            <Link to="/"><Button variant="ghost" size="sm"><ChevronLeft className="w-4 h-4 mr-2" />Back to Home</Button></Link>
+            <Link to="/">
+              <Button variant="ghost" size="sm">
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
             <h1 className="text-3xl font-bold text-foreground">Choose Your Template</h1>
           </div>
 
-          {/* fixed 220px columns, centered, tighter horizontal gap */}
+          {/* 3 fixed 220px columns, centered, tighter horizontal gap */}
           <div className="grid gap-y-10 gap-x-5 justify-center" style={{ gridTemplateColumns: "repeat(3, 220px)" }}>
             {templates.map((template) => {
               const sampleData = getSampleDataForTemplate(template.id);
-
-              const A4_W = 794;
-              const A4_H = 1123;
-              const THUMB_W = 220;
-              const scale    = THUMB_W / A4_W;
-              const THUMB_H  = Math.round(A4_H * scale);
-
+              const A4_W = 794, A4_H = 1123, THUMB_W = 220;
+              const scale = THUMB_W / A4_W;
+              const THUMB_H = Math.round(A4_H * scale);
               const chosenColor = thumbColors[template.id] ?? template.color;
 
               return (
                 <div key={template.id} className="flex flex-col items-center">
+                  {/* CV thumbnail is the button */}
                   <button
                     type="button"
                     onClick={() => handleTemplateSelect(template.id, chosenColor)}
@@ -162,7 +171,6 @@ const CVBuilder = () => {
                           left: 0
                         }}
                       >
-                        {/* thumbnail stays clipped (no unbounded) */}
                         <CVPreview
                           data={sampleData}
                           template={{ ...template, color: chosenColor }}
@@ -172,7 +180,7 @@ const CVBuilder = () => {
                     </div>
                   </button>
 
-                  {/* Color options below each CV */}
+                  {/* Color options below each CV (scoped per card) */}
                   <div className="mt-3 flex flex-wrap justify-center gap-2">
                     {colorOptions.map((opt) => {
                       const active = chosenColor === opt.value;
@@ -266,19 +274,21 @@ const CVBuilder = () => {
 
       <div className="container mx-auto px-4 py-6">
         {previewMode ? (
-          // Full-width preview (unbounded, will show multiple pages by growing in height)
+          // Full-width preview: unbounded (multi-page), scrollable vertically
           <div className="flex justify-center">
-            <div ref={pdfRef}>
+            <div ref={pdfRef} style={{ overflow: "auto" }}>
               <CVPreview
                 data={cvData}
                 template={{ ...currentTemplate, color: templateColor }}
                 isPDF
+                // IMPORTANT: your CVPreview should render with .cv-export when this flag is present
+                // (per the version we discussed)
                 unbounded
               />
             </div>
           </div>
         ) : (
-          // Side-by-side editor + live preview (scaled)
+          // Side-by-side editor + live preview (scaled), still unbounded & scrollable
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="space-y-6">
               <CVEditor
@@ -289,8 +299,12 @@ const CVBuilder = () => {
                 onFieldEdit={setEditedFields}
               />
             </div>
-            <div className="flex flex-col overflow-hidden">
-              <div ref={previewContainerRef} className="flex justify-center" style={{ overflow: "hidden" }}>
+            <div className="flex flex-col">
+              <div
+                ref={previewContainerRef}
+                className="flex justify-center"
+                style={{ overflow: "auto", maxHeight: "calc(100vh - 200px)" }}
+              >
                 <div
                   ref={!previewMode ? pdfRef : undefined}
                   style={{
@@ -299,7 +313,6 @@ const CVBuilder = () => {
                     transition: "transform 0.2s ease-in-out"
                   }}
                 >
-                  {/* Unbounded so it can grow vertically; scaling keeps it fitting the pane */}
                   <CVPreview
                     data={cvData}
                     template={{ ...currentTemplate, color: templateColor }}
