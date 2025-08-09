@@ -134,38 +134,39 @@ const CVBuilder = () => {
   };
 
   const handleDownloadPDF = async () => {
-   if (!exportRef.current || !selectedTemplate) return;
+    if (!pdfRef.current || !selectedTemplate) return;
 
-  try {
-    toast({
-      title: "Generating PDF...",
-      description: "Please wait while we create your CV.",
-    });
+    try {
+      toast({
+        title: "Generating PDF...",
+        description: "Please wait while we create your CV.",
+      });
 
-    const element = exportRef.current;
-    const opt = {
-      margin: 0,
-      filename: 'my-cv.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 3.78, // ~300 DPI
-        useCORS: true
-      },
-      jsPDF: { unit: 'mm', format: [210, 297], orientation: 'portrait' }
-    };
+      const currentTemplate = templates.find(t => t.id === selectedTemplate)!;
+      const element = pdfRef.current;
+      const opt = {
+        margin: 0,
+        filename: 'my-cv.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 3.78, // 300 DPI for A4
+          useCORS: true
+        },
+        jsPDF: { unit: 'mm', format: [210, 297], orientation: 'portrait' }
+      };
 
-    await html2pdf().set(opt).from(element).save();
-
-    toast({
-      title: "PDF Downloaded!",
-      description: "Your CV has been successfully downloaded.",
-    });
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    toast({
-      title: "Download Failed",
-      description: "There was an error generating your PDF. Please try again.",
-      variant: "destructive",
+      await html2pdf().set(opt).from(element).save();
+      
+      toast({
+        title: "PDF Downloaded!",
+        description: "Your CV has been successfully downloaded.",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Download Failed",
+        description: "There was an error generating your PDF. Please try again.",
+        variant: "destructive",
       });
     }
   };
