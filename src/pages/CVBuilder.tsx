@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Download, Eye, Palette } from "lucide-react";
 import { Link } from "react-router-dom";
 import CVEditor from "@/components/CVEditor";
@@ -12,9 +14,9 @@ import html2pdf from "html2pdf.js";
 
 const templates: CVTemplate[] = [
   { id: "professional", name: "Professional Modern", description: "", features: [], hasPhoto: true, columns: 2, color: "blue" },
-  { id: "creative",     name: "Creative Portfolio",   description: "", features: [], hasPhoto: true, columns: 1, color: "purple" },
-  { id: "executive",    name: "Executive Elite",      description: "", features: [], hasPhoto: true, columns: 2, color: "green" },
-  { id: "minimal",      name: "Minimalist Clean",     description: "", features: [], hasPhoto: false, columns: 1, color: "gray" }
+  { id: "creative",    name: "Creative Portfolio",  description: "", features: [], hasPhoto: true, columns: 1, color: "purple" },
+  { id: "executive",   name: "Executive Elite",     description: "", features: [], hasPhoto: true, columns: 2, color: "green" },
+  { id: "minimal",     name: "Minimalist Clean",    description: "", features: [], hasPhoto: false,columns: 1, color: "gray" },
 ];
 
 const initialCVData: CVData = {
@@ -25,45 +27,45 @@ const initialCVData: CVData = {
   skills: [],
   languages: [],
   certifications: [],
-  references: []
+  references: [],
 };
 
+// color dots used under each preview
 const colorOptions = [
   { value: "slate",   label: "Slate",   color: "hsl(215 25% 27%)" },
   { value: "rose",    label: "Rose",    color: "hsl(11 70% 84%)" },
   { value: "emerald", label: "Emerald", color: "hsl(164 44% 80%)" },
   { value: "amber",   label: "Gray",    color: "hsl(0 0% 49%)" },
   { value: "blue",    label: "Blue",    color: "hsl(217 91% 60%)" },
-  { value: "orange",  label: "Orange",  color: "hsl(20 90% 48%)" }
+  { value: "orange",  label: "Orange",  color: "hsl(20 90% 48%)" },
 ];
+
+const THUMB_SCALE = 0.30; // preview scale in the gallery
 
 const CVBuilder = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [cvData, setCvData] = useState<CVData>(initialCVData);
   const [previewMode, setPreviewMode] = useState(false);
   const [templateColor, setTemplateColor] = useState<string>("blue");
+
+  // per-card color for gallery thumbnails (keyed by index)
+  const [localColors, setLocalColors] = useState<Record<number, string>>({});
+
   const [previewScale, setPreviewScale] = useState(1);
   const [editedFields, setEditedFields] = useState<Record<string, boolean>>({});
 
-  // per-thumbnail color choice (so user can preview colors before selecting)
-  const [thumbColors, setThumbColors] = useState<Record<string, string>>({});
-
-  // On-screen preview refs
   const pdfRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null); // hidden A4 node for perfect export
   const previewContainerRef = useRef<HTMLDivElement>(null);
-
-  // Off-screen A4 export ref (used by html2pdf)
-  const exportRef = useRef<HTMLDivElement>(null);
-
   const { toast } = useToast();
 
-  // Scale on-screen preview to fit its pane
+  // responsive scale for on-page editor preview (not gallery)
   useEffect(() => {
     const calculateScale = () => {
       if (!previewContainerRef.current || previewMode) return;
       const container = previewContainerRef.current;
       const containerWidth = container.clientWidth;
-      const cvWidth = 794; // on-screen preview width
+      const cvWidth = 794; // px
       const scale = Math.min(containerWidth / cvWidth, 1);
       setPreviewScale(scale);
     };
@@ -72,29 +74,22 @@ const CVBuilder = () => {
     return () => window.removeEventListener("resize", calculateScale);
   }, [selectedTemplate, previewMode]);
 
-  const handleTemplateSelect = (templateId: string, chosenColor?: string) => {
+  const handleTemplateSelect = (templateId: string, color?: string) => {
     setSelectedTemplate(templateId);
     setCvData(placeholderData);
     setEditedFields({});
-    setTemplateColor(chosenColor || thumbColors[templateId] || (templates.find(t => t.id === templateId)?.color ?? "blue"));
+    const t = templates.find((t) => t.id === templateId);
+    setTemplateColor(color || t?.color || "blue");
   };
 
   const handleDataChange = (newData: CVData) => setCvData(newData);
 
-  // Export from hidden full-size A4 node
   const handleDownloadPDF = async () => {
+    // render from the hidden, perfectly-sized A4 node
     if (!exportRef.current || !selectedTemplate) return;
 
     try {
       toast({ title: "Generating PDF...", description: "Please wait while we create your CV." });
-
-      if ("fonts" in document) {
-        try { await (document as any).fonts.ready; } catch {}
-      }
-      const imgs = Array.from(exportRef.current.querySelectorAll("img"));
-      await Promise.all(
-        imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = () => res(null); }))
-      );
 
       const element = exportRef.current;
       const opt = {
@@ -102,95 +97,113 @@ const CVBuilder = () => {
         filename: "my-cv.pdf",
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 3.78, useCORS: true }, // ~300 DPI
-        jsPDF: { unit: "mm", format: [210, 297], orientation: "portrait" }
+        jsPDF: { unit: "mm", format: [210, 297], orientation: "portrait" as const },
       };
 
       await html2pdf().set(opt).from(element).save();
+
       toast({ title: "PDF Downloaded!", description: "Your CV has been successfully downloaded." });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast({ title: "Download Failed", description: "There was an error generating your PDF. Please try again.", variant: "destructive" });
+      toast({
+        title: "Download Failed",
+        description: "There was an error generating your PDF. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  // ===========================
-  // Template chooser (3 per row, CV is the button, color preview below)
-  // ===========================
+  // -----------------------------
+  // Template chooser (3 per row)
+  // -----------------------------
   if (!selectedTemplate) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center gap-4 mb-8">
-            <Link to="/"><Button variant="ghost" size="sm"><ChevronLeft className="w-4 h-4 mr-2" />Back to Home</Button></Link>
+        <div className="container mx-auto px-4 pt-6">
+          <div className="flex items-center gap-4 mb-6">
+            <Link to="/">
+              <Button variant="ghost" size="sm">
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
             <h1 className="text-3xl font-bold text-foreground">Choose Your Template</h1>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {templates.map((template) => {
+          {/* 3 columns on xl; horizontal gap reduced ~50% */}
+          <div
+            className="
+              grid
+              grid-cols-1
+              md:grid-cols-2
+              xl:grid-cols-3
+              gap-y-16
+              gap-x-8 md:gap-x-10 xl:gap-x-12
+            "
+          >
+            {templates.map((template, i) => {
               const sampleData = getSampleDataForTemplate(template.id);
-
-              // Thumbnail sizing
-              const A4_W = 794;
-              const A4_H = 1123;
-              const THUMB_W = 220; // adjust to taste
-              const scale    = THUMB_W / A4_W;
-              const THUMB_H  = Math.round(A4_H * scale);
-
-              const chosenColor = thumbColors[template.id] ?? template.color;
+              const currentColor = localColors[i] ?? template.color;
 
               return (
-                <div key={template.id} className="flex flex-col items-center">
-                  {/* CV thumbnail is the button */}
+                <div key={template.id} className="flex flex-col items-center select-none">
+                  {/* Clickable CV thumbnail */}
                   <button
                     type="button"
-                    onClick={() => handleTemplateSelect(template.id, chosenColor)}
-                    className="outline-none focus:ring-2 focus:ring-primary/40 rounded-lg"
-                    aria-label={`Choose ${template.name}`}
+                    aria-label={`Use ${template.name}`}
+                    onClick={() => handleTemplateSelect(template.id, currentColor)}
+                    className="
+                      relative outline-none
+                      rounded-2xl
+                      transition
+                      hover:scale-[1.01]
+                      focus-visible:ring-2 focus-visible:ring-primary
+                    "
+                    style={{
+                      boxShadow: "0 10px 30px -10px rgba(0,0,0,.15)",
+                      padding: "12px",
+                      background: "hsla(0,0%,100%,.65)",
+                      backdropFilter: "blur(4px)",
+                    }}
                   >
                     <div
-                      className="rounded-lg shadow-card hover:shadow-elegant transition-smooth bg-white"
-                      style={{
-                        width: THUMB_W,
-                        height: THUMB_H,
-                        overflow: "hidden",
-                        position: "relative"
-                      }}
+                      className="cv-a4 bg-white"
+                      style={{ transform: `scale(${THUMB_SCALE})`, transformOrigin: "top left" }}
                     >
-                      <div
-                        style={{
-                          width: A4_W,
-                          height: A4_H,
-                          transform: `scale(${scale})`,
-                          transformOrigin: "top left",
-                          position: "absolute",
-                          top: 0,
-                          left: 0
-                        }}
-                      >
-                        <CVPreview
-                          data={sampleData}
-                          template={{ ...template, color: chosenColor }}
-                          isPreview
-                        />
-                      </div>
+                      <CVPreview
+                        data={sampleData}
+                        template={{ ...template, color: currentColor as any }}
+                        isPreview
+                        isPDF={false}
+                      />
                     </div>
+
+                    {/* invisible hit-area matches visual frame */}
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 rounded-2xl"
+                      style={{ border: "1px solid rgba(0,0,0,0.04)" }}
+                    />
                   </button>
 
-                  {/* Color options below each CV */}
-                  <div className="mt-3 flex flex-wrap justify-center gap-2">
-                    {colorOptions.map((opt) => {
-                      const active = chosenColor === opt.value;
+                  {/* Per-card color selector */}
+                  <div className="mt-4 flex items-center gap-3">
+                    {colorOptions.map((c) => {
+                      const active = currentColor === c.value;
                       return (
                         <button
-                          key={opt.value}
+                          key={c.value}
                           type="button"
-                          aria-label={`Preview ${template.name} in ${opt.label}`}
                           onClick={(e) => {
-                            e.stopPropagation(); // don't select template when changing color
-                            setThumbColors(prev => ({ ...prev, [template.id]: opt.value }));
+                            e.stopPropagation();
+                            setLocalColors((prev) => ({ ...prev, [i]: c.value }));
                           }}
-                          className={`w-5 h-5 rounded-full border ${active ? "ring-2 ring-primary/50 border-white" : "border-white/80"} transition-transform hover:scale-110`}
-                          style={{ backgroundColor: opt.color }}
+                          className={`
+                            w-5 h-5 rounded-full border
+                            ${active ? "ring-2 ring-offset-2 ring-primary" : "border-white/70"}
+                          `}
+                          style={{ backgroundColor: c.color }}
+                          title={c.label}
                         />
                       );
                     })}
@@ -204,10 +217,10 @@ const CVBuilder = () => {
     );
   }
 
-  // ===========================
-  // Builder / Preview / Export
-  // ===========================
-  const currentTemplate = templates.find(t => t.id === selectedTemplate)!;
+  // -----------------------------
+  // Builder + preview/editor view
+  // -----------------------------
+  const currentTemplate = templates.find((t) => t.id === selectedTemplate)!;
 
   return (
     <div className="min-h-screen bg-background">
@@ -226,6 +239,7 @@ const CVBuilder = () => {
             </div>
 
             <div className="flex items-center gap-4">
+              {/* color picker for the live builder */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Palette className="w-4 h-4 text-muted-foreground" />
@@ -258,7 +272,6 @@ const CVBuilder = () => {
                 <Eye className="w-4 h-4 mr-2" />
                 {previewMode ? "Edit" : "Preview"}
               </Button>
-
               <Button variant="default" size="sm" onClick={handleDownloadPDF}>
                 <Download className="w-4 h-4 mr-2" />
                 Download PDF
@@ -272,7 +285,11 @@ const CVBuilder = () => {
         {previewMode ? (
           <div className="flex justify-center">
             <div ref={pdfRef} className="cv-page">
-              <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPDF />
+              <CVPreview
+                data={cvData}
+                template={{ ...currentTemplate, color: templateColor }}
+                isPDF={true}
+              />
             </div>
           </div>
         ) : (
@@ -286,28 +303,33 @@ const CVBuilder = () => {
                 onFieldEdit={setEditedFields}
               />
             </div>
+
             <div className="flex flex-col overflow-hidden">
               <div ref={previewContainerRef} className="flex justify-center" style={{ overflow: "hidden" }}>
                 <div
-                  ref={!previewMode ? pdfRef : undefined}
                   style={{
                     transform: `scale(${previewScale})`,
                     transformOrigin: "top center",
-                    transition: "transform 0.2s ease-in-out"
+                    transition: "transform 0.2s ease-in-out",
                   }}
                 >
-                  <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPreview isPDF={false} />
+                  <CVPreview
+                    data={cvData}
+                    template={{ ...currentTemplate, color: templateColor }}
+                    isPreview
+                    isPDF={false}
+                  />
                 </div>
               </div>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Hidden A4 export node (off-screen but fully rendered at A4) */}
-        <div aria-hidden="true" style={{ position: "fixed", top: 0, left: "-10000px", zIndex: -1 }}>
-          <div ref={exportRef} className="cv-page">
-            <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPDF />
-          </div>
+      {/* Hidden A4 export node */}
+      <div aria-hidden="true" style={{ position: "fixed", top: 0, left: "-10000px", zIndex: -1 }}>
+        <div ref={exportRef} className="cv-page">
+          <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPDF={true} />
         </div>
       </div>
     </div>
