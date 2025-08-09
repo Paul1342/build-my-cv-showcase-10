@@ -1,4 +1,3 @@
-// src/pages/CVBuilder.tsx
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,7 +21,7 @@ const templates: CVTemplate[] = [
     features: ["Two Column", "Photo Optional", "ATS Friendly"],
     hasPhoto: true,
     columns: 2,
-    color: "blue",
+    color: "blue"
   },
   {
     id: "creative",
@@ -31,7 +30,7 @@ const templates: CVTemplate[] = [
     features: ["Single Column", "Photo Required", "Creative Design"],
     hasPhoto: true,
     columns: 1,
-    color: "purple",
+    color: "purple"
   },
   {
     id: "executive",
@@ -40,7 +39,7 @@ const templates: CVTemplate[] = [
     features: ["Two Column", "Photo Optional", "Elegant"],
     hasPhoto: true,
     columns: 2,
-    color: "green",
+    color: "green"
   },
   {
     id: "minimal",
@@ -49,8 +48,8 @@ const templates: CVTemplate[] = [
     features: ["Single Column", "No Photo", "Minimal"],
     hasPhoto: false,
     columns: 1,
-    color: "gray",
-  },
+    color: "gray"
+  }
 ];
 
 const initialCVData: CVData = {
@@ -61,7 +60,7 @@ const initialCVData: CVData = {
     phone: "",
     address: "",
     website: "",
-    photoUrl: "",
+    photoUrl: ""
   },
   summary: "",
   workExperience: [],
@@ -69,7 +68,7 @@ const initialCVData: CVData = {
   skills: [],
   languages: [],
   certifications: [],
-  references: [],
+  references: []
 };
 
 const colorOptions = [
@@ -78,7 +77,7 @@ const colorOptions = [
   { value: "emerald", label: "Emerald", color: "hsl(164 44% 80%)" },
   { value: "amber", label: "Gray", color: "hsl(0 0% 49%)" },
   { value: "blue", label: "Blue", color: "hsl(217 91% 60%)" },
-  { value: "orange", label: "Orange", color: "hsl(20 90% 48%)" },
+  { value: "orange", label: "Orange", color: "hsl(20 90% 48%)" }
 ];
 
 const CVBuilder = () => {
@@ -98,11 +97,10 @@ const CVBuilder = () => {
 
   const { toast } = useToast();
 
-  // Calculate responsive scale for on-screen preview
+  // Scale on-screen preview to fit its pane
   useEffect(() => {
     const calculateScale = () => {
       if (!previewContainerRef.current || previewMode) return;
-
       const container = previewContainerRef.current;
       const containerWidth = container.clientWidth;
       const cvWidth = 794; // fixed on-screen preview width
@@ -125,7 +123,7 @@ const CVBuilder = () => {
 
   const handleDataChange = (newData: CVData) => setCvData(newData);
 
-  // >>> PDF EXPORT: always capture the hidden full-size A4 node via exportRef
+  // Always capture the hidden full-size A4 node via exportRef
   const handleDownloadPDF = async () => {
     if (!exportRef.current || !selectedTemplate) return;
 
@@ -135,13 +133,26 @@ const CVBuilder = () => {
         description: "Please wait while we create your CV.",
       });
 
+      // Make sure fonts & images are ready to avoid reflow (which looks like scaling)
+      if ("fonts" in document) {
+        try { await (document as any).fonts.ready; } catch {}
+      }
+      const imgs = Array.from(exportRef.current.querySelectorAll("img"));
+      await Promise.all(
+        imgs.map(img =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise(res => { img.onload = img.onerror = () => res(null); })
+        )
+      );
+
       const element = exportRef.current;
       const opt = {
         margin: 0,
         filename: "my-cv.pdf",
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 3.78, useCORS: true }, // ~300 DPI
-        jsPDF: { unit: "mm", format: [210, 297], orientation: "portrait" },
+        jsPDF: { unit: "mm", format: [210, 297], orientation: "portrait" }
       };
 
       await html2pdf().set(opt).from(element).save();
@@ -182,7 +193,7 @@ const CVBuilder = () => {
                   key={template.id}
                   className="group overflow-hidden shadow-card hover:shadow-elegant transition-all duration-300 hover:-translate-y-2"
                 >
-                  {/* Preview Section - portrait card */}
+                  {/* Preview card */}
                   <div className="h-80 bg-gradient-to-br from-primary/5 to-secondary/5 p-3 relative overflow-hidden">
                     <div className="cv-a4-container h-full">
                       <div className="cv-scale-to-fit" style={{ transform: "scale(0.25)" }}>
@@ -191,15 +202,15 @@ const CVBuilder = () => {
                     </div>
                   </div>
 
-                  {/* Info Section */}
                   <div className="p-6 space-y-4">
                     <div>
                       <h3 className="text-xl font-semibold text-foreground mb-2">
                         {template.name}
                       </h3>
-                      <p className="text-sm text-muted-foreground">{template.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {template.description}
+                      </p>
                     </div>
-
                     <div className="flex flex-wrap gap-2">
                       {template.features.map((feature, index) => (
                         <Badge key={index} variant="secondary" className="text-xs">
@@ -207,7 +218,6 @@ const CVBuilder = () => {
                         </Badge>
                       ))}
                     </div>
-
                     <Button
                       variant="default"
                       className="w-full"
@@ -238,13 +248,15 @@ const CVBuilder = () => {
                 Back to Templates
               </Button>
               <div>
-                <h1 className="text-xl font-semibold text-foreground">{currentTemplate.name}</h1>
+                <h1 className="text-xl font-semibold text-foreground">
+                  {currentTemplate.name}
+                </h1>
                 <p className="text-sm text-muted-foreground">CV Builder</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Color Selection */}
+              {/* Color selection */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Palette className="w-4 h-4 text-muted-foreground" />
@@ -289,7 +301,7 @@ const CVBuilder = () => {
 
       <div className="container mx-auto px-4 py-6">
         {previewMode ? (
-          // On-screen full-page preview (ok to keep)
+          // On-screen full-page preview (OK to keep)
           <div className="flex justify-center">
             <div ref={pdfRef} className="cv-page">
               <CVPreview
