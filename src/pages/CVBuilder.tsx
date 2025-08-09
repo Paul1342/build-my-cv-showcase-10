@@ -45,6 +45,9 @@ const CVBuilder = () => {
   const [previewScale, setPreviewScale] = useState(1);
   const [editedFields, setEditedFields] = useState<Record<string, boolean>>({});
 
+  // per-thumbnail color choice (so user can preview colors before selecting)
+  const [thumbColors, setThumbColors] = useState<Record<string, string>>({});
+
   // On-screen preview refs
   const pdfRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -69,12 +72,11 @@ const CVBuilder = () => {
     return () => window.removeEventListener("resize", calculateScale);
   }, [selectedTemplate, previewMode]);
 
-  const handleTemplateSelect = (templateId: string) => {
+  const handleTemplateSelect = (templateId: string, chosenColor?: string) => {
     setSelectedTemplate(templateId);
     setCvData(placeholderData);
     setEditedFields({});
-    const template = templates.find(t => t.id === templateId);
-    if (template) setTemplateColor(template.color);
+    setTemplateColor(chosenColor || thumbColors[templateId] || (templates.find(t => t.id === templateId)?.color ?? "blue"));
   };
 
   const handleDataChange = (newData: CVData) => setCvData(newData);
@@ -112,7 +114,7 @@ const CVBuilder = () => {
   };
 
   // ===========================
-  // Template chooser (thumbnails are the buttons)
+  // Template chooser (3 per row, CV is the button, color preview below)
   // ===========================
   if (!selectedTemplate) {
     return (
@@ -123,29 +125,30 @@ const CVBuilder = () => {
             <h1 className="text-3xl font-bold text-foreground">Choose Your Template</h1>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
             {templates.map((template) => {
               const sampleData = getSampleDataForTemplate(template.id);
 
               // Thumbnail sizing
               const A4_W = 794;
               const A4_H = 1123;
-              const THUMB_W = 190; // tweak 160–220 if you want bigger/smaller
+              const THUMB_W = 220; // adjust to taste
               const scale    = THUMB_W / A4_W;
               const THUMB_H  = Math.round(A4_H * scale);
 
+              const chosenColor = thumbColors[template.id] ?? template.color;
+
               return (
-                <div
-                  key={template.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleTemplateSelect(template.id)}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleTemplateSelect(template.id)}
-                  className="group cursor-pointer rounded-xl border border-border bg-card/60 hover:bg-card transition-smooth shadow-card hover:shadow-elegant outline-none focus:ring-2 focus:ring-primary/40"
-                >
-                  <div className="p-5 flex items-center justify-center">
+                <div key={template.id} className="flex flex-col items-center">
+                  {/* CV thumbnail is the button */}
+                  <button
+                    type="button"
+                    onClick={() => handleTemplateSelect(template.id, chosenColor)}
+                    className="outline-none focus:ring-2 focus:ring-primary/40 rounded-lg"
+                    aria-label={`Choose ${template.name}`}
+                  >
                     <div
-                      className="rounded-md shadow-card bg-white"
+                      className="rounded-lg shadow-card hover:shadow-elegant transition-smooth bg-white"
                       style={{
                         width: THUMB_W,
                         height: THUMB_H,
@@ -164,9 +167,33 @@ const CVBuilder = () => {
                           left: 0
                         }}
                       >
-                        <CVPreview data={sampleData} template={template} isPreview />
+                        <CVPreview
+                          data={sampleData}
+                          template={{ ...template, color: chosenColor }}
+                          isPreview
+                        />
                       </div>
                     </div>
+                  </button>
+
+                  {/* Color options below each CV */}
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    {colorOptions.map((opt) => {
+                      const active = chosenColor === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          aria-label={`Preview ${template.name} in ${opt.label}`}
+                          onClick={(e) => {
+                            e.stopPropagation(); // don't select template when changing color
+                            setThumbColors(prev => ({ ...prev, [template.id]: opt.value }));
+                          }}
+                          className={`w-5 h-5 rounded-full border ${active ? "ring-2 ring-primary/50 border-white" : "border-white/80"} transition-transform hover:scale-110`}
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -269,12 +296,7 @@ const CVBuilder = () => {
                     transition: "transform 0.2s ease-in-out"
                   }}
                 >
-                  <CVPreview
-                    data={cvData}
-                    template={{ ...currentTemplate, color: templateColor }}
-                    isPreview
-                    isPDF={false}
-                  />
+                  <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPreview isPDF={false} />
                 </div>
               </div>
             </div>
