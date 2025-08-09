@@ -45,14 +45,14 @@ const CVBuilder = () => {
   const [previewScale, setPreviewScale] = useState(1);
   const [editedFields, setEditedFields] = useState<Record<string, boolean>>({});
 
-  // per-thumbnail color choice (so user can preview colors before selecting)
+  // per-thumbnail color choice
   const [thumbColors, setThumbColors] = useState<Record<string, string>>({});
 
   // On-screen preview refs
   const pdfRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
-  // Off-screen A4 export ref (used by html2pdf)
+  // Off-screen export ref
   const exportRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
@@ -63,7 +63,7 @@ const CVBuilder = () => {
       if (!previewContainerRef.current || previewMode) return;
       const container = previewContainerRef.current;
       const containerWidth = container.clientWidth;
-      const cvWidth = 794; // on-screen preview width
+      const cvWidth = 794; // on-screen width
       const scale = Math.min(containerWidth / cvWidth, 1);
       setPreviewScale(scale);
     };
@@ -81,7 +81,7 @@ const CVBuilder = () => {
 
   const handleDataChange = (newData: CVData) => setCvData(newData);
 
-  // Export from hidden full-size A4 node
+  // Export from hidden unbounded node (auto-paginates)
   const handleDownloadPDF = async () => {
     if (!exportRef.current || !selectedTemplate) return;
 
@@ -102,10 +102,11 @@ const CVBuilder = () => {
         filename: "my-cv.pdf",
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 3.78, useCORS: true }, // ~300 DPI
-        jsPDF: { unit: "mm", format: [210, 297], orientation: "portrait" }
-      };
+        jsPDF: { unit: "mm", format: [210, 297], orientation: "portrait" },
+        pagebreak: { mode: ["css", "legacy"] } // let it split cleanly
+      } as const;
 
-      await html2pdf().set(opt).from(element).save();
+      await (html2pdf() as any).set(opt).from(element).save();
       toast({ title: "PDF Downloaded!", description: "Your CV has been successfully downloaded." });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -125,16 +126,14 @@ const CVBuilder = () => {
             <h1 className="text-3xl font-bold text-foreground">Choose Your Template</h1>
           </div>
 
-          <div className="grid gap-y-10 gap-x-5 justify-center"
-  style={{ gridTemplateColumns: "repeat(3, 220px)" }}>
-
+          {/* fixed 220px columns, centered, tighter horizontal gap */}
+          <div className="grid gap-y-10 gap-x-5 justify-center" style={{ gridTemplateColumns: "repeat(3, 220px)" }}>
             {templates.map((template) => {
               const sampleData = getSampleDataForTemplate(template.id);
 
-              // Thumbnail sizing
               const A4_W = 794;
               const A4_H = 1123;
-              const THUMB_W = 220; // adjust to taste
+              const THUMB_W = 220;
               const scale    = THUMB_W / A4_W;
               const THUMB_H  = Math.round(A4_H * scale);
 
@@ -142,7 +141,6 @@ const CVBuilder = () => {
 
               return (
                 <div key={template.id} className="flex flex-col items-center">
-                  {/* CV thumbnail is the button */}
                   <button
                     type="button"
                     onClick={() => handleTemplateSelect(template.id, chosenColor)}
@@ -151,12 +149,7 @@ const CVBuilder = () => {
                   >
                     <div
                       className="rounded-lg shadow-card hover:shadow-elegant transition-smooth bg-white"
-                      style={{
-                        width: THUMB_W,
-                        height: THUMB_H,
-                        overflow: "hidden",
-                        position: "relative"
-                      }}
+                      style={{ width: THUMB_W, height: THUMB_H, overflow: "hidden", position: "relative" }}
                     >
                       <div
                         style={{
@@ -169,6 +162,7 @@ const CVBuilder = () => {
                           left: 0
                         }}
                       >
+                        {/* thumbnail stays clipped (no unbounded) */}
                         <CVPreview
                           data={sampleData}
                           template={{ ...template, color: chosenColor }}
@@ -188,7 +182,7 @@ const CVBuilder = () => {
                           type="button"
                           aria-label={`Preview ${template.name} in ${opt.label}`}
                           onClick={(e) => {
-                            e.stopPropagation(); // don't select template when changing color
+                            e.stopPropagation();
                             setThumbColors(prev => ({ ...prev, [template.id]: opt.value }));
                           }}
                           className={`w-5 h-5 rounded-full border ${active ? "ring-2 ring-primary/50 border-white" : "border-white/80"} transition-transform hover:scale-110`}
@@ -272,12 +266,19 @@ const CVBuilder = () => {
 
       <div className="container mx-auto px-4 py-6">
         {previewMode ? (
+          // Full-width preview (unbounded, will show multiple pages by growing in height)
           <div className="flex justify-center">
-            <div ref={pdfRef} className="cv-page">
-              <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPDF />
+            <div ref={pdfRef}>
+              <CVPreview
+                data={cvData}
+                template={{ ...currentTemplate, color: templateColor }}
+                isPDF
+                unbounded
+              />
             </div>
           </div>
         ) : (
+          // Side-by-side editor + live preview (scaled)
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="space-y-6">
               <CVEditor
@@ -298,17 +299,28 @@ const CVBuilder = () => {
                     transition: "transform 0.2s ease-in-out"
                   }}
                 >
-                  <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPreview isPDF={false} />
+                  {/* Unbounded so it can grow vertically; scaling keeps it fitting the pane */}
+                  <CVPreview
+                    data={cvData}
+                    template={{ ...currentTemplate, color: templateColor }}
+                    isPreview
+                    unbounded
+                  />
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Hidden A4 export node (off-screen but fully rendered at A4) */}
+        {/* Hidden unbounded export node (lets html2pdf auto-paginate) */}
         <div aria-hidden="true" style={{ position: "fixed", top: 0, left: "-10000px", zIndex: -1 }}>
-          <div ref={exportRef} className="cv-page">
-            <CVPreview data={cvData} template={{ ...currentTemplate, color: templateColor }} isPDF />
+          <div ref={exportRef}>
+            <CVPreview
+              data={cvData}
+              template={{ ...currentTemplate, color: templateColor }}
+              isPDF
+              unbounded
+            />
           </div>
         </div>
       </div>
