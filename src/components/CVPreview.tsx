@@ -8,10 +8,9 @@ const DEFAULT_AVATAR_URL =
 interface CVPreviewProps {
   data: CVData;
   template: CVTemplate;
-  isPreview?: boolean;   // used for on-screen preview & thumbnails
-  isPDF?: boolean;       // used for export/print mode
+  isPreview?: boolean;
+  isPDF?: boolean;
   isFullPagePDF?: boolean;
-  unbounded?: boolean;   // NEW: allow height to grow beyond a single A4 (multi-page flow)
 }
 
 const CVPreview = ({
@@ -20,7 +19,6 @@ const CVPreview = ({
   isPreview = false,
   isPDF = false,
   isFullPagePDF = false,
-  unbounded = false,
 }: CVPreviewProps) => {
   const formatDate = (dateString: string) => {
     if (!dateString) return "";
@@ -29,18 +27,24 @@ const CVPreview = ({
   };
 
   const getSkillLevel = (level: string) => {
-    const levels: Record<string, number> = { Beginner: 25, Intermediate: 50, Advanced: 75, Expert: 100 };
+    const levels: Record<string, number> = {
+      Beginner: 25,
+      Intermediate: 50,
+      Advanced: 75,
+      Expert: 100,
+    };
     return levels[level] ?? 50;
   };
 
+  // Color values for each palette
   const getColorValues = (colorName: string) => {
     const colorMap = {
-      slate:   { primary: "215, 25%, 27%", secondary: "215, 25%, 95%", accent: "215, 25%, 20%" },
-      rose:    { primary: "11, 70%, 84%",  secondary: "11, 70%, 95%", accent: "11, 70%, 74%" },
+      slate: { primary: "215, 25%, 27%", secondary: "215, 25%, 95%", accent: "215, 25%, 20%" },
+      rose: { primary: "11, 70%, 84%", secondary: "11, 70%, 95%", accent: "11, 70%, 74%" },
       emerald: { primary: "164, 44%, 80%", secondary: "164, 44%, 95%", accent: "164, 44%, 70%" },
-      amber:   { primary: "0, 0%, 49%",    secondary: "0, 0%, 95%",   accent: "0, 0%, 39%" },
-      blue:    { primary: "217, 91%, 60%", secondary: "217, 91%, 95%", accent: "217, 91%, 50%" },
-      orange:  { primary: "20, 90%, 48%",  secondary: "20, 90%, 95%",  accent: "20, 90%, 40%" },
+      amber: { primary: "0, 0%, 49%", secondary: "0, 0%, 95%", accent: "0, 0%, 39%" },
+      blue: { primary: "217, 91%, 60%", secondary: "217, 91%, 95%", accent: "217, 91%, 50%" },
+      orange: { primary: "20, 90%, 48%", secondary: "20, 90%, 95%", accent: "20, 90%, 40%" },
     } as const;
 
     const key = (Object.prototype.hasOwnProperty.call(colorMap, colorName)
@@ -57,6 +61,7 @@ const CVPreview = ({
     ["--template-accent" as any]: getColorValues(template.color).accent,
   };
 
+  // Template-specific style helpers
   const getTemplateStyles = () => {
     const baseStyle = "transition-all duration-300";
     const dynamicStyles = {
@@ -71,7 +76,12 @@ const CVPreview = ({
       case "professional":
         return { ...dynamicStyles, headerStyle: `${baseStyle} cv-header-professional` };
       case "creative":
-        return { ...dynamicStyles, sidebarBg: "cv-sidebar-creative", headerStyle: `${baseStyle} cv-header-creative`, skillBar: "cv-skill-bar-creative" };
+        return {
+          ...dynamicStyles,
+          sidebarBg: "cv-sidebar-creative",
+          headerStyle: `${baseStyle} cv-header-creative`,
+          skillBar: "cv-skill-bar-creative",
+        };
       case "executive":
         return { ...dynamicStyles, headerStyle: `${baseStyle} cv-header-executive` };
       case "minimal":
@@ -83,26 +93,14 @@ const CVPreview = ({
 
   const styles = getTemplateStyles();
 
-  // Helpers to build outer wrapper classes/styles
-  const outerBase = isPDF ? "bg-white" : "bg-background";
-  const chrome = isPDF ? "" : "border border-border rounded-lg shadow-card";
-  const overflowClip = unbounded ? "" : "overflow-hidden";
-  const textSize = isPreview ? "text-xs" : "text-sm";
-
-  // When unbounded, don't use fixed .cv-a4; let it grow and set width/min-height inline.
-  // Screen: 794 x 1123 px.  PDF: 210 x 297 mm.
-  const unboundedStyle: CSSProperties = unbounded
-    ? (isPDF
-        ? { width: "210mm", minHeight: "297mm" }
-        : { width: "794px",  minHeight: "1123px" })
-    : {};
-
   if (template.columns === 2) {
-    // Two Column
+    // Two Column Layout with full-height ribbon
     const cvContent = (
       <div
-        className={`${unbounded ? "" : "cv-a4"} ${outerBase} ${chrome} ${overflowClip} ${textSize}`}
-        style={{ ...unboundedStyle, ...colorVars }}
+        className={`cv-a4 relative ${isPDF ? "bg-white" : "bg-background"} ${
+          isPDF ? "" : "border border-border rounded-lg shadow-card"
+        } overflow-hidden ${isPreview ? "text-xs" : "text-sm"}`}
+        style={colorVars}
       >
         <style>{`
           .cv-sidebar-bg { background-color: hsl(var(--template-secondary)); }
@@ -118,9 +116,13 @@ const CVPreview = ({
           .cv-header-minimal { border-bottom: 2px solid hsl(var(--template-primary)); }
         `}</style>
 
-        <div className="flex h-full items-stretch">
-          {/* Left Sidebar */}
-          <div className={`w-1/3 ${styles.sidebarBg} p-6 space-y-6 h-full flex flex-col`}>
+        {/* Full-height ribbon behind the left column */}
+        <div className="absolute left-0 top-0 h-full w-1/3 cv-sidebar-bg" aria-hidden />
+
+        <div className="relative flex h-full items-stretch">
+          {/* Left Sidebar (content only; ribbon drawn by absolute bg) */}
+          <div className={`w-1/3 p-6 space-y-6 h-full flex flex-col`}>
+            {/* Photo */}
             {template.hasPhoto && (
               <div className="text-center">
                 <img
@@ -133,7 +135,9 @@ const CVPreview = ({
 
             {/* Contact */}
             <div>
-              <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>Contact</h3>
+              <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>
+                Contact
+              </h3>
               <div className="space-y-2">
                 {data.personalInfo.email && (
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -165,7 +169,9 @@ const CVPreview = ({
             {/* Skills */}
             {data.skills.length > 0 && (
               <div>
-                <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>Skills</h3>
+                <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>
+                  Skills
+                </h3>
                 <div className="space-y-3">
                   {data.skills.map((skill) => (
                     <div key={skill.id}>
@@ -174,7 +180,10 @@ const CVPreview = ({
                         <span className="text-xs text-muted-foreground">{skill.level}</span>
                       </div>
                       <div className="w-full bg-muted/50 rounded-full h-2">
-                        <div className={`${styles.skillBar} h-2 rounded-full transition-all duration-500`} style={{ width: `${getSkillLevel(skill.level)}%` }} />
+                        <div
+                          className={`${styles.skillBar} h-2 rounded-full transition-all duration-500`}
+                          style={{ width: `${getSkillLevel(skill.level)}%` }}
+                        />
                       </div>
                     </div>
                   ))}
@@ -185,7 +194,9 @@ const CVPreview = ({
             {/* Languages */}
             {data.languages.length > 0 && (
               <div>
-                <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>Languages</h3>
+                <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>
+                  Languages
+                </h3>
                 <div className="space-y-2">
                   {data.languages.map((lang) => (
                     <div key={lang.id} className="flex items-center justify-between">
@@ -200,7 +211,9 @@ const CVPreview = ({
             {/* Certifications */}
             {data.certifications.length > 0 && (
               <div>
-                <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>Certifications</h3>
+                <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>
+                  Certifications
+                </h3>
                 <div className="space-y-3">
                   {data.certifications.map((cert) => (
                     <div key={cert.id}>
@@ -221,7 +234,9 @@ const CVPreview = ({
             {/* References */}
             {data.references.length > 0 && (
               <div>
-                <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>References</h3>
+                <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-sm`}>
+                  References
+                </h3>
                 <div className="space-y-3">
                   {data.references.map((ref) => (
                     <div key={ref.id}>
@@ -243,6 +258,7 @@ const CVPreview = ({
 
           {/* Right Content */}
           <div className="flex-1 p-6 space-y-6 h-full flex flex-col">
+            {/* Header */}
             <div className={`${template.id === "minimal" ? styles.headerStyle + " pb-4" : "border-b border-border pb-4"}`}>
               {template.id !== "minimal" && (
                 <div className={`${styles.headerStyle} text-white p-4 rounded-lg mb-4 shadow-md`}>
@@ -252,12 +268,15 @@ const CVPreview = ({
               )}
               {template.id === "minimal" && (
                 <>
-                  <h1 className={`text-2xl font-bold ${styles.primaryColor} mb-1`}>{data.personalInfo.fullName || "Your Name"}</h1>
+                  <h1 className={`text-2xl font-bold ${styles.primaryColor} mb-1`}>
+                    {data.personalInfo.fullName || "Your Name"}
+                  </h1>
                   <p className="text-lg text-muted-foreground">{data.personalInfo.jobTitle || "Your Job Title"}</p>
                 </>
               )}
             </div>
 
+            {/* Summary */}
             {data.summary && (
               <div>
                 <h3 className={`font-semibold ${styles.primaryColor} mb-3 text-lg`}>Professional Summary</h3>
@@ -265,13 +284,16 @@ const CVPreview = ({
               </div>
             )}
 
+            {/* Work Experience */}
             {data.workExperience.length > 0 && (
               <div>
                 <h3 className={`font-semibold ${styles.primaryColor} mb-4 text-lg`}>Work Experience</h3>
                 <div className="space-y-6">
                   {data.workExperience.map((exp) => (
                     <div key={exp.id} className="relative">
-                      {template.id === "creative" && <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`} />}
+                      {template.id === "creative" && (
+                        <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`} />
+                      )}
                       <div className={`${template.id === "creative" ? "pl-4" : ""}`}>
                         <div className="flex justify-between items-start mb-2">
                           <div>
@@ -287,9 +309,13 @@ const CVPreview = ({
                         </div>
                         {exp.responsibilities.length > 0 && (
                           <ul className="list-disc list-inside text-muted-foreground space-y-1 ml-4">
-                            {exp.responsibilities.filter((r) => r.trim()).map((resp, index) => (
-                              <li key={index} className="text-sm leading-relaxed">{resp}</li>
-                            ))}
+                            {exp.responsibilities
+                              .filter((r) => r.trim())
+                              .map((resp, index) => (
+                                <li key={index} className="text-sm leading-relaxed">
+                                  {resp}
+                                </li>
+                              ))}
                           </ul>
                         )}
                       </div>
@@ -299,13 +325,16 @@ const CVPreview = ({
               </div>
             )}
 
+            {/* Education */}
             {data.education.length > 0 && (
               <div>
                 <h3 className={`font-semibold ${styles.primaryColor} mb-4 text-lg`}>Education</h3>
                 <div className="space-y-6">
                   {data.education.map((edu) => (
                     <div key={edu.id} className="relative">
-                      {template.id === "creative" && <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`} />}
+                      {template.id === "creative" && (
+                        <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`} />
+                      )}
                       <div className={`${template.id === "creative" ? "pl-4" : ""}`}>
                         <div className="flex justify-between items-start mb-2">
                           <div>
@@ -334,11 +363,13 @@ const CVPreview = ({
 
     return isFullPagePDF ? <div className="cv-page">{cvContent}</div> : cvContent;
   } else {
-    // Single Column
+    // Single Column Layout (unchanged)
     const cvContent = (
       <div
-        className={`${unbounded ? "" : "cv-a4"} ${outerBase} ${chrome} ${overflowClip} p-6 ${textSize} space-y-6`}
-        style={{ ...unboundedStyle, ...colorVars }}
+        className={`cv-a4 ${isPDF ? "bg-white" : "bg-background"} ${
+          isPDF ? "" : "border border-border rounded-lg shadow-card"
+        } p-6 ${isPreview ? "text-xs" : "text-sm"} space-y-6`}
+        style={colorVars}
       >
         <style>{`
           .cv-sidebar-bg { background-color: hsl(var(--template-secondary)); }
@@ -359,15 +390,35 @@ const CVPreview = ({
           {template.id !== "minimal" && (
             <div className={`${styles.headerStyle} text-white p-6 rounded-lg mb-6 shadow-md`}>
               {template.hasPhoto && (
-                <img src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL} alt="Profile" className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-white/20 mb-4 shadow-lg" />
+                <img
+                  src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-white/20 mb-4 shadow-lg"
+                />
               )}
               <h1 className="text-3xl font-bold mb-2">{data.personalInfo.fullName || "Your Name"}</h1>
               <p className="text-xl opacity-90 mb-4">{data.personalInfo.jobTitle || "Your Job Title"}</p>
 
+              {/* Contact Info */}
               <div className="flex flex-wrap justify-center gap-4 text-sm text-white/80">
-                {data.personalInfo.email && <div className="flex items-center gap-1"><Mail className="w-4 h-4" />{data.personalInfo.email}</div>}
-                {data.personalInfo.phone && <div className="flex items-center gap-1"><Phone className="w-4 h-4" />{data.personalInfo.phone}</div>}
-                {data.personalInfo.address && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{data.personalInfo.address}</div>}
+                {data.personalInfo.email && (
+                  <div className="flex items-center gap-1">
+                    <Mail className="w-4 h-4" />
+                    {data.personalInfo.email}
+                  </div>
+                )}
+                {data.personalInfo.phone && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-4 h-4" />
+                    {data.personalInfo.phone}
+                  </div>
+                )}
+                {data.personalInfo.address && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {data.personalInfo.address}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -375,15 +426,37 @@ const CVPreview = ({
           {template.id === "minimal" && (
             <>
               {template.hasPhoto && (
-                <img src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL} alt="Profile" className={`w-24 h-24 rounded-full mx-auto object-cover border-4 ${styles.borderColor}/20 mb-4 shadow-md`} />
+                <img
+                  src={data.personalInfo.photoUrl || DEFAULT_AVATAR_URL}
+                  alt="Profile"
+                  className={`w-24 h-24 rounded-full mx-auto object-cover border-4 ${styles.borderColor}/20 mb-4 shadow-md`}
+                />
               )}
-              <h1 className={`text-3xl font-bold ${styles.primaryColor} mb-2`}>{data.personalInfo.fullName || "Your Name"}</h1>
+              <h1 className={`text-3xl font-bold ${styles.primaryColor} mb-2`}>
+                {data.personalInfo.fullName || "Your Name"}
+              </h1>
               <p className="text-xl text-muted-foreground mb-4">{data.personalInfo.jobTitle || "Your Job Title"}</p>
 
+              {/* Contact Info */}
               <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-                {data.personalInfo.email && <div className="flex items-center gap-1"><Mail className="w-4 h-4" />{data.personalInfo.email}</div>}
-                {data.personalInfo.phone && <div className="flex items-center gap-1"><Phone className="w-4 h-4" />{data.personalInfo.phone}</div>}
-                {data.personalInfo.address && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{data.personalInfo.address}</div>}
+                {data.personalInfo.email && (
+                  <div className="flex items-center gap-1">
+                    <Mail className="w-4 h-4" />
+                    {data.personalInfo.email}
+                  </div>
+                )}
+                {data.personalInfo.phone && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-4 h-4" />
+                    {data.personalInfo.phone}
+                  </div>
+                )}
+                {data.personalInfo.address && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    {data.personalInfo.address}
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -392,7 +465,9 @@ const CVPreview = ({
         {/* Summary */}
         {data.summary && (
           <div>
-            <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-lg`}>Professional Summary</h3>
+            <h3 className={`font-semibold ${styles.primaryColor} mb-3 border-b ${styles.borderColor}/30 pb-1 text-lg`}>
+              Professional Summary
+            </h3>
             <p className="text-muted-foreground leading-relaxed">{data.summary}</p>
           </div>
         )}
@@ -400,11 +475,15 @@ const CVPreview = ({
         {/* Work Experience */}
         {data.workExperience.length > 0 && (
           <div>
-            <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>Work Experience</h3>
+            <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>
+              Work Experience
+            </h3>
             <div className="space-y-6">
               {data.workExperience.map((exp) => (
                 <div key={exp.id} className="relative">
-                  {template.id === "creative" && <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`} />}
+                  {template.id === "creative" && (
+                    <div className={`absolute left-0 top-0 w-1 h-full ${styles.accentColor} rounded-full`} />
+                  )}
                   <div className={`${template.id === "creative" ? "pl-4" : ""}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
@@ -420,9 +499,13 @@ const CVPreview = ({
                     </div>
                     {exp.responsibilities.length > 0 && (
                       <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                        {exp.responsibilities.filter((r) => r.trim()).map((resp, index) => (
-                          <li key={index} className="text-sm leading-relaxed">{resp}</li>
-                        ))}
+                        {exp.responsibilities
+                          .filter((r) => r.trim())
+                          .map((resp, index) => (
+                            <li key={index} className="text-sm leading-relaxed">
+                              {resp}
+                            </li>
+                          ))}
                       </ul>
                     )}
                   </div>
@@ -434,16 +517,21 @@ const CVPreview = ({
 
         {/* Two-column grid for remaining sections */}
         <div className="grid md:grid-cols-2 gap-6">
+          {/* Education */}
           {data.education.length > 0 && (
             <div>
-              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>Education</h3>
+              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>
+                Education
+              </h3>
               <div className="space-y-4">
                 {data.education.map((edu) => (
                   <div key={edu.id}>
                     <h4 className="text-foreground font-medium">{edu.degree}</h4>
                     <p className="text-muted-foreground">{edu.fieldOfStudy}</p>
                     <p className={`font-medium ${styles.primaryColor}`}>{edu.institution}</p>
-                    <div className="text-sm text-muted-foreground">{formatDate(edu.startDate)} - {formatDate(edu.endDate)}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {formatDate(edu.startDate)} - {formatDate(edu.endDate)}
+                    </div>
                     {edu.grade && <div className="text-sm text-muted-foreground">Grade: {edu.grade}</div>}
                   </div>
                 ))}
@@ -451,9 +539,12 @@ const CVPreview = ({
             </div>
           )}
 
+          {/* Skills */}
           {data.skills.length > 0 && (
             <div>
-              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>Skills</h3>
+              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>
+                Skills
+              </h3>
               <div className="space-y-3">
                 {data.skills.map((skill) => (
                   <div key={skill.id}>
@@ -462,7 +553,10 @@ const CVPreview = ({
                       <span className="text-sm text-muted-foreground">{skill.level}</span>
                     </div>
                     <div className="w-full bg-muted/50 rounded-full h-2">
-                      <div className={`${styles.skillBar} h-2 rounded-full transition-all duration-500`} style={{ width: `${getSkillLevel(skill.level)}%` }} />
+                      <div
+                        className={`${styles.skillBar} h-2 rounded-full transition-all duration-500`}
+                        style={{ width: `${getSkillLevel(skill.level)}%` }}
+                      />
                     </div>
                   </div>
                 ))}
@@ -473,9 +567,12 @@ const CVPreview = ({
 
         {/* Bottom sections */}
         <div className="grid md:grid-cols-2 gap-6">
+          {/* Languages */}
           {data.languages.length > 0 && (
             <div>
-              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>Languages</h3>
+              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>
+                Languages
+              </h3>
               <div className="space-y-2">
                 {data.languages.map((lang) => (
                   <div key={lang.id} className="flex items-center justify-between">
@@ -487,9 +584,12 @@ const CVPreview = ({
             </div>
           )}
 
+          {/* Certifications */}
           {data.certifications.length > 0 && (
             <div>
-              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>Certifications</h3>
+              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>
+                Certifications
+              </h3>
               <div className="space-y-4">
                 {data.certifications.map((cert) => (
                   <div key={cert.id}>
@@ -507,9 +607,12 @@ const CVPreview = ({
             </div>
           )}
 
+          {/* References */}
           {data.references.length > 0 && (
             <div>
-              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>References</h3>
+              <h3 className={`font-semibold ${styles.primaryColor} mb-4 border-b ${styles.borderColor}/30 pb-1 text-lg`}>
+                References
+              </h3>
               <div className="space-y-4">
                 {data.references.map((ref) => (
                   <div key={ref.id}>
